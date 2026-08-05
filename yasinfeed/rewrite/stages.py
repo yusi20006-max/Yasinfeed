@@ -2,7 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import List
 from yasinfeed.models import Article
-from yasinfeed.rewrite.providers import BaseProvider
+from yasinfeed.rewrite.pipeline_providers import BaseProvider
 
 class BaseStage(ABC):
     """
