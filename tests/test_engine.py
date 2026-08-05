@@ -18,6 +18,23 @@ class TestEngine(unittest.TestCase):
             self.assertIn(m_name, engine.modules)
             self.assertIsInstance(engine.modules[m_name], BaseModule)
 
+    def tearDown(self):
+        # Clean up logging handlers to avoid ResourceWarnings and clean up state
+        import logging
+        root_logger = logging.getLogger()
+        for h in list(root_logger.handlers):
+            h.close()
+            root_logger.removeHandler(h)
+
+        # Remove the generated log file
+        import os
+        for log_file in ["yasinfeed.log", "test_yasinfeed.log"]:
+            if os.path.exists(log_file):
+                try:
+                    os.remove(log_file)
+                except OSError:
+                    pass
+
     def test_engine_start_and_stop_lifecycle(self):
         engine = YasinFeedEngine(config_path="/path/to/nonexistent/config.yaml")
         success = engine.initialize()
