@@ -4,6 +4,17 @@ from yasinfeed.rewrite.providers.factory import create_provider
 from yasinfeed.rewrite.providers.base import AIProviderError, AIConfigurationError
 
 
+class AIProviderAdapter(BaseProvider):
+    def __init__(self, ai_provider):
+        self.ai_provider = ai_provider
+
+    def rewrite(self, title: str, content: str) -> str:
+        if hasattr(self.ai_provider, "rewrite"):
+            return self.ai_provider.rewrite(title, content)
+        prompt = f"Title: {title}\nContent: {content}"
+        return self.ai_provider.generate(prompt)
+
+
 class RewriteModule(BaseModule):
     """
     Handles rewriting and summary generation for news content.
