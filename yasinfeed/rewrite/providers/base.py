@@ -46,3 +46,10 @@ class BaseAIProvider(ABC):
         Raises AICallError if the request/generation fails.
         """
         pass
+
+    def rewrite(self, title: str, content: str) -> str:
+        """
+        A default implementation of rewrite using generate.
+        """
+        prompt = f"Title: {title}\nContent: {content}"
+        return self.generate(prompt)

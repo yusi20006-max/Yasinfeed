@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime
 from yasinfeed.models import Article
-from yasinfeed.rewrite.providers import DummyProvider, MockAIProvider
+from yasinfeed.rewrite.pipeline_providers import DummyProvider, MockAIProvider
 from yasinfeed.rewrite.stages import SanitizationStage, RewriteStage, TranslationStage, MetadataTaggingStage
 from yasinfeed.rewrite.pipeline import ContentPipeline
 from yasinfeed.rewrite import RewriteModule
