@@ -1,0 +1,4 @@
+services:
+  yasinfeed:
+    build: .
+    restart: always
