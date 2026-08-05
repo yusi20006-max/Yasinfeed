@@ -49,6 +49,20 @@ DEFAULT_CONFIG = {
 def cast_value(val, default_val):
     """Cast a string value to the same type as default_val."""
     if default_val is None:
+        if isinstance(val, str):
+            val_lower = val.lower()
+            if val_lower in ("true", "yes", "on"):
+                return True
+            if val_lower in ("false", "no", "off"):
+                return False
+            try:
+                return int(val)
+            except ValueError:
+                pass
+            try:
+                return float(val)
+            except ValueError:
+                pass
         return val
     if isinstance(default_val, bool):
         if isinstance(val, str):
@@ -88,7 +102,7 @@ def override_from_env(config, prefix="YASINFEED_"):
     Supports both nested overrides via double underscores (e.g., YASINFEED__API__PORT)
     and standard environment variables as fallbacks.
     """
-    for env_key, env_val in os.environ.items():
+    for env_key, env_val in list(os.environ.items()):
         if not env_key.startswith(prefix):
             continue
 

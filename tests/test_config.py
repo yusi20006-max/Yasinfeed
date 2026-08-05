@@ -51,5 +51,43 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config["publisher"]["eitaa"]["enabled"], True)
         self.assertEqual(config["fetch"]["interval_seconds"], 60)
 
+    def test_cast_value_auto_detection_when_default_none(self):
+        # Test bool detection
+        self.assertTrue(cast_value("true", None))
+        self.assertTrue(cast_value("YES", None))
+        self.assertTrue(cast_value("on", None))
+        self.assertFalse(cast_value("false", None))
+        self.assertFalse(cast_value("NO", None))
+        self.assertFalse(cast_value("off", None))
+
+        # Test integer detection
+        self.assertEqual(cast_value("456", None), 456)
+        self.assertEqual(cast_value("-12", None), -12)
+
+        # Test float detection
+        self.assertEqual(cast_value("3.1415", None), 3.1415)
+        self.assertEqual(cast_value("-0.005", None), -0.005)
+
+        # Test fallback to string
+        self.assertEqual(cast_value("hello", None), "hello")
+        self.assertEqual(cast_value("123hello", None), "123hello")
+
+        # Non-string input should return as-is
+        self.assertEqual(cast_value(999, None), 999)
+
+    def test_dynamic_deep_nested_env_overrides(self):
+        # Keys not predefined in DEFAULT_CONFIG should be correctly parsed, and types auto-detected
+        os.environ["YASINFEED__PUBLISHER__EITAA__SUB_CONFIG__ENABLED"] = "true"
+        os.environ["YASINFEED__PUBLISHER__EITAA__SUB_CONFIG__RETRY_COUNT"] = "5"
+        os.environ["YASINFEED__PUBLISHER__EITAA__SUB_CONFIG__TIMEOUT"] = "15.5"
+        os.environ["YASINFEED__PUBLISHER__EITAA__SUB_CONFIG__NAME"] = "my_eitaa_sub"
+
+        config = load_config("/path/to/nonexistent/config.yaml")
+        sub = config["publisher"]["eitaa"]["sub_config"]
+        self.assertEqual(sub["enabled"], True)
+        self.assertEqual(sub["retry_count"], 5)
+        self.assertEqual(sub["timeout"], 15.5)
+        self.assertEqual(sub["name"], "my_eitaa_sub")
+
 if __name__ == "__main__":
     unittest.main()
