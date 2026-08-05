@@ -18,12 +18,24 @@ class AICallError(AIProviderError):
     pass
 
 
-class BaseAIProvider(ABC):
+class BaseProvider(ABC):
+    """
+    Abstract base class for all content rewrite and transformation providers.
+    """
+    @abstractmethod
+    def rewrite(self, title: str, content: str) -> str:
+        """
+        Rewrite or transform the given content and return the result.
+        """
+        pass
+
+
+class BaseAIProvider(BaseProvider, ABC):
     """
     Abstract Base Class representing an AI Provider for content rewriting/summarization.
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any] = None):
         """
         Initializes the provider with its specific configuration block.
         """
@@ -46,3 +58,10 @@ class BaseAIProvider(ABC):
         Raises AICallError if the request/generation fails.
         """
         pass
+
+    def rewrite(self, title: str, content: str) -> str:
+        """
+        Default bridge implementation of rewrite calling generate.
+        """
+        prompt = f"Title: {title}\nContent: {content}"
+        return self.generate(prompt)
