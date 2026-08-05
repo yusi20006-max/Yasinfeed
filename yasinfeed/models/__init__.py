@@ -23,6 +23,21 @@ class Article:
     rewrite_status: str = "pending" # pending, completed, skipped
     published_outputs: List[str] = field(default_factory=list) # e.g. ["eitaa", "rss"]
 
+@dataclass
+class User:
+    id: str
+    username: str
+    password_hash: str
+    salt: str
+    created_at: datetime
+
+@dataclass
+class Session:
+    token: str
+    user_id: str
+    expires_at: datetime
+    created_at: datetime
+
 class ModelsModule(BaseModule):
     """
     Manages data models and provides schemas for feed processing pipelines.

@@ -1,6 +1,6 @@
 from typing import Optional, List
 from yasinfeed.engine import BaseModule
-from yasinfeed.models import FeedSource, Article
+from yasinfeed.models import FeedSource, Article, User, Session
 from yasinfeed.storage.base import StorageBackend
 from yasinfeed.storage.sqlite import SQLiteStorage
 from yasinfeed.storage.json_storage import JSONStorage
@@ -65,3 +65,35 @@ class StorageModule(BaseModule):
     def list_articles(self) -> List[Article]:
         """Lists all stored Articles."""
         return self.backend.list_articles()
+
+    def save_user(self, user: User) -> None:
+        """Saves or updates a User using the active storage backend."""
+        self.backend.save_user(user)
+
+    def get_user(self, user_id: str) -> Optional[User]:
+        """Retrieves a User by their unique ID."""
+        return self.backend.get_user(user_id)
+
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        """Retrieves a User by their unique username."""
+        return self.backend.get_user_by_username(username)
+
+    def list_users(self) -> List[User]:
+        """Lists all stored Users."""
+        return self.backend.list_users()
+
+    def save_session(self, session: Session) -> None:
+        """Saves or updates a Session using the active storage backend."""
+        self.backend.save_session(session)
+
+    def get_session(self, token: str) -> Optional[Session]:
+        """Retrieves a Session by its unique token."""
+        return self.backend.get_session(token)
+
+    def delete_session(self, token: str) -> None:
+        """Deletes/invalidates a Session by its token."""
+        self.backend.delete_session(token)
+
+    def list_sessions(self) -> List[Session]:
+        """Lists all stored Sessions."""
+        return self.backend.list_sessions()

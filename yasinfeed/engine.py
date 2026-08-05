@@ -79,6 +79,7 @@ class YasinFeedEngine:
             # To avoid circular imports, we can import them dynamically inside initialize
             from yasinfeed.storage import StorageModule
             from yasinfeed.models import ModelsModule
+            from yasinfeed.auth import AuthModule
             from yasinfeed.rewrite import RewriteModule
             from yasinfeed.fetch import FetchModule
             from yasinfeed.publisher import PublisherModule
@@ -88,6 +89,7 @@ class YasinFeedEngine:
             # Register them in the correct dependency order
             self.register_module(StorageModule)
             self.register_module(ModelsModule)
+            self.register_module(AuthModule)
             self.register_module(RewriteModule)
             self.register_module(FetchModule)
             self.register_module(PublisherModule)

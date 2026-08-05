@@ -3,7 +3,7 @@ from yasinfeed.rewrite.providers.base import BaseAIProvider, AIConfigurationErro
 from yasinfeed.rewrite.providers.dummy import DummyProvider
 from yasinfeed.rewrite.providers.openai import OpenAIProvider
 from yasinfeed.rewrite.providers.huggingface import HuggingFaceProvider
-from yasinfeed.rewrite.providers import MockAIProvider
+from yasinfeed.rewrite.pipeline_providers import MockAIProvider
 
 # Mapping of provider identifiers to their concrete class implementations.
 PROVIDERS: Dict[str, Type[BaseAIProvider]] = {
