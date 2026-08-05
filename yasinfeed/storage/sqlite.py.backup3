@@ -83,162 +83,27 @@ class SQLiteStorage(StorageBackend):
 
 
     def save_feed_source(self, feed_source):
-        cursor = self.conn.cursor()
-
-        cursor.execute(
-            """
-            INSERT INTO feed_sources
-            (id, name, url, enabled, last_fetched_at)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-            name=excluded.name,
-            url=excluded.url,
-            enabled=excluded.enabled,
-            last_fetched_at=excluded.last_fetched_at
-            """,
-            (
-                feed_source.id,
-                feed_source.name,
-                feed_source.url,
-                1 if feed_source.enabled else 0,
-                feed_source.last_fetched_at.isoformat()
-                if getattr(feed_source, "last_fetched_at", None)
-                else None
-            )
-        )
-
-        self.conn.commit()
+        pass
 
 
     def get_feed_source(self, feed_source_id):
-        cursor = self.conn.cursor()
-
-        cursor.execute(
-            "SELECT * FROM feed_sources WHERE id=?",
-            (feed_source_id,)
-        )
-
-        row = cursor.fetchone()
-
-        if not row:
-            return None
-
-        return FeedSource(
-            id=row["id"],
-            name=row["name"],
-            url=row["url"],
-            enabled=bool(row["enabled"])
-        )
+        return None
 
 
     def list_feed_sources(self):
-        cursor = self.conn.cursor()
-
-        cursor.execute(
-            "SELECT * FROM feed_sources"
-        )
-
-        rows = cursor.fetchall()
-
-        return [
-            FeedSource(
-                id=row["id"],
-                name=row["name"],
-                url=row["url"],
-                enabled=bool(row["enabled"])
-            )
-            for row in rows
-        ]
+        return []
 
 
     def save_article(self, article):
-        import json
-
-        cursor = self.conn.cursor()
-
-        cursor.execute(
-            """
-            INSERT INTO articles
-            (
-                id,
-                source_id,
-                title,
-                content,
-                original_url,
-                published_at,
-                rewritten_content,
-                rewrite_status,
-                published_outputs
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-            title=excluded.title,
-            content=excluded.content,
-            rewritten_content=excluded.rewritten_content,
-            rewrite_status=excluded.rewrite_status,
-            published_outputs=excluded.published_outputs
-            """,
-            (
-                article.id,
-                article.source_id,
-                article.title,
-                article.content,
-                article.original_url,
-                article.published_at.isoformat(),
-                getattr(article, "rewritten_content", None),
-                getattr(article, "rewrite_status", "pending"),
-                json.dumps(
-                    getattr(article, "published_outputs", [])
-                )
-            )
-        )
-
-        self.conn.commit()
+        pass
 
 
     def get_article(self, article_id):
-        import json
-
-        cursor = self.conn.cursor()
-
-        cursor.execute(
-            "SELECT * FROM articles WHERE id=?",
-            (article_id,)
-        )
-
-        row = cursor.fetchone()
-
-        if not row:
-            return None
-
-        return Article(
-            id=row["id"],
-            source_id=row["source_id"],
-            title=row["title"],
-            content=row["content"],
-            original_url=row["original_url"],
-            published_at=datetime.fromisoformat(row["published_at"]),
-            rewritten_content=row["rewritten_content"],
-            rewrite_status=row["rewrite_status"],
-            published_outputs=json.loads(
-                row["published_outputs"]
-            )
-        )
+        return None
 
 
     def list_articles(self):
-        cursor = self.conn.cursor()
-
-        cursor.execute(
-            "SELECT * FROM articles"
-        )
-
-        rows = cursor.fetchall()
-
-        return [
-            self.get_article(row["id"])
-            for row in rows
-        ]
+        return []
 
 
     def save_user(self, user):

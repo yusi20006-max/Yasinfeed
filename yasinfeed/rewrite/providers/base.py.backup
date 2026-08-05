@@ -21,16 +21,6 @@ class BaseAIProvider(ABC):
     New AI provider interface.
     """
 
-    def __init__(self, config=None):
-        self.config = config or {}
-        self.validate_config()
-
-    def validate_config(self) -> None:
-        """
-        Validate provider configuration.
-        """
-        pass
-
     @abstractmethod
     def generate(self, prompt: str, **kwargs):
         pass

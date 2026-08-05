@@ -1,0 +1,9 @@
+from yasinfeed.engine import BaseModule
+from .apikey import APIKeyAuth
+
+class AuthModule(BaseModule):
+
+    def initialize(self):
+        self.logger.info("Auth initialized.")
+        self.api_key = APIKeyAuth()
+        return True

@@ -1,3 +1,4 @@
+from yasinfeed.rewrite.providers.base import BaseProvider
 from yasinfeed.engine import BaseModule
 from yasinfeed.models import Article
 from yasinfeed.rewrite.providers.factory import create_provider
