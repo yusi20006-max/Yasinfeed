@@ -1,0 +1,38 @@
+# YasinFeed Core Configuration
+
+app:
+  name: "YasinFeed"
+  env: "production"
+
+logging:
+  level: "INFO"
+  file_path: "yasinfeed.log"
+  console: true
+
+api:
+  host: "127.0.0.1"
+  port: 8000
+
+fetch:
+  interval_seconds: 300
+
+rewrite:
+  provider: "dummy"
+
+storage:
+  type: "sqlite"
+  path: "data/yasinfeed.db"
+
+scheduler:
+  enabled: true
+
+publisher:
+  eitaa:
+    enabled: false
+  pwa:
+    enabled: false
+  rss:
+    enabled: false
+
+models:
+  provider: "dummy"
