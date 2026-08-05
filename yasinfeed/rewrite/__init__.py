@@ -35,6 +35,13 @@ class RewriteModule(BaseModule):
         self.logger.info("Rewrite module started.")
         return True
 
+    def process_article(self, article: Article) -> Article:
+        """
+        Runs the full modular ContentPipeline workflow on an Article.
+        """
+        self.logger.info("Processing article through Content Pipeline: %s", article.id)
+        return self.pipeline.process(article)
+
     def rewrite_content(self, title: str, content: str) -> str:
         """
         Rewrites content using the configured AI provider.
