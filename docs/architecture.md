@@ -93,17 +93,14 @@ Each of the seven core modules has been designed for extreme modularity and clea
 ### 5. `yasinfeed/rewrite`
 - **Class:** `RewriteModule`
 - **Purpose:** Content processing, summarization, translation, and optimization.
-- **Responsibility:** Formats, sanitizes, and rewrites feed content using a modular sequential Content Pipeline Engine. Connects with agent/adaptor interfaces for AI summary generation or translations.
-- **Content Pipeline Engine:**
-  - **Pipeline Orchestrator (`ContentPipeline`):** Manages sequential execution of processing stages on an `Article`.
-  - **Providers (`BaseProvider`):** Abstraction interface for backend transformations. Concrete options include `DummyProvider` and `MockAIProvider` (used for test summaries).
-  - **Processing Stages (`BaseStage`):**
-    - `SanitizationStage`: Strips HTML formatting tags and standardizes redundant whitespaces/newlines.
-    - `RewriteStage`: Integrates the configured provider to rewrite/summarize content.
-    - `TranslationStage`: Simulates translation targeting selected languages (e.g., prefixing `[Translated to EN]`).
-    - `MetadataTaggingStage`: Auto-tags articles with hashtags based on detected keywords.
+- **Responsibility:** Formats, sanitizes, and rewrites feed content. Connects with modular AI provider architecture (`BaseAIProvider`) to rewrite feed text.
+- **Architecture Details:** See `docs/ai_providers.md` for full implementation and interface specs.
+- **Supported Providers:**
+  - `dummy`: Offline testing/dry-run provider.
+  - `openai`: OpenAI-compatible endpoint provider (using standard `urllib.request`). Perfect for official OpenAI models or local proxy servers (Ollama, LM Studio).
+  - `huggingface`: Hugging Face Serverless Inference provider (using standard `urllib.request`).
 - **Future Extension Points:**
-  - Integration with diverse AI / LLM rewrite APIs (e.g. Ollama for offline Termux/local-first use, OpenAI, Claude, or DeepL translation).
+  - Adding offline translate providers or other custom local-first modules.
   - Modular preprocessing pipelines (regex sanitizer, profanity filter, HTML cleaner).
 
 ### 6. `yasinfeed/scheduler`

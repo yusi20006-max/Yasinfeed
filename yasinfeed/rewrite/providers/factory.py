@@ -1,0 +1,26 @@
+from typing import Dict, Any, Type
+from yasinfeed.rewrite.providers.base import BaseAIProvider, AIConfigurationError
+from yasinfeed.rewrite.providers.dummy import DummyProvider
+from yasinfeed.rewrite.providers.openai import OpenAIProvider
+from yasinfeed.rewrite.providers.huggingface import HuggingFaceProvider
+
+# Mapping of provider identifiers to their concrete class implementations.
+PROVIDERS: Dict[str, Type[BaseAIProvider]] = {
+    "dummy": DummyProvider,
+    "openai": OpenAIProvider,
+    "huggingface": HuggingFaceProvider,
+}
+
+
+def create_provider(provider_name: str, config: Dict[str, Any]) -> BaseAIProvider:
+    """
+    Factory function to instantiate the correct AI provider class based on its name.
+    """
+    name_lower = (provider_name or "").strip().lower()
+    if name_lower not in PROVIDERS:
+        raise AIConfigurationError(
+            f"Unsupported AI provider: '{provider_name}'. Supported providers: {list(PROVIDERS.keys())}"
+        )
+
+    provider_cls = PROVIDERS[name_lower]
+    return provider_cls(config)
