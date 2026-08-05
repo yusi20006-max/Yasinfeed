@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from yasinfeed.models import FeedSource, Article
+from yasinfeed.models import FeedSource, Article, User, Session
 
 class StorageBackend(ABC):
     """
@@ -35,6 +35,46 @@ class StorageBackend(ABC):
     @abstractmethod
     def list_articles(self) -> List[Article]:
         """Lists all stored Article entities."""
+        pass
+
+    @abstractmethod
+    def save_user(self, user: User) -> None:
+        """Saves or updates a User in the store."""
+        pass
+
+    @abstractmethod
+    def get_user(self, user_id: str) -> Optional[User]:
+        """Retrieves a User by their unique ID."""
+        pass
+
+    @abstractmethod
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        """Retrieves a User by their unique username."""
+        pass
+
+    @abstractmethod
+    def list_users(self) -> List[User]:
+        """Lists all stored User entities."""
+        pass
+
+    @abstractmethod
+    def save_session(self, session: Session) -> None:
+        """Saves or updates a Session in the store."""
+        pass
+
+    @abstractmethod
+    def get_session(self, token: str) -> Optional[Session]:
+        """Retrieves a Session by its unique token."""
+        pass
+
+    @abstractmethod
+    def delete_session(self, token: str) -> None:
+        """Deletes/invalidates a Session by its token."""
+        pass
+
+    @abstractmethod
+    def list_sessions(self) -> List[Session]:
+        """Lists all stored Session entities."""
         pass
 
     @abstractmethod
