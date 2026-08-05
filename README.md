@@ -51,6 +51,8 @@ yasinfeed/
 4. **`storage`**: Deals with database/file read/write operations, supporting SQLite persistence.
    - *Extension Points:* Pluggable backends (`SQLiteStorage`, `JSONStorage`), automated database migrations.
 5. **`scheduler`**: A cyclic task execution layer triggering automated fetching/rewriting/publishing loops.
+   - *Capabilities:* Thread-safe background execution, job management (pause, resume, add, and remove jobs), and comprehensive execution tracking (start/end times, execution duration, run counts, failure error messages).
+   - *Default Automation Pipeline:* Registers a default pipeline job `fetch_and_process` running at configured fetch intervals. This automatically orchestrates the entire cycle: fetching raw content streams from `fetch` module, creating/saving articles to `storage`, rewriting them with standard/AI summary layers via `rewrite`, and publishing/distributing to Eitaa, RSS, or PWA endpoints via `publisher`.
    - *Extension Points:* Advanced cron schedules, back-off retry timings.
 6. **`publisher`**: Adapts content to feed endpoints: Eitaa messaging, PWA client endpoints, and XML-compliant RSS.
    - *Extension Points:* New delivery channels (Bluesky, Discord), customizable rich formatting.
