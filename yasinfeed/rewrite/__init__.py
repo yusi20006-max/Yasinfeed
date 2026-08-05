@@ -30,7 +30,6 @@ class RewriteModule(BaseModule):
             self.logger.error("Failed to initialize rewrite provider %s: %s", self.provider_name, e, exc_info=True)
             return False
 
-        # Initialize the ContentPipeline with sequential stages
         from yasinfeed.rewrite.pipeline import ContentPipeline
         from yasinfeed.rewrite.stages import SanitizationStage, RewriteStage, TranslationStage, MetadataTaggingStage
 
