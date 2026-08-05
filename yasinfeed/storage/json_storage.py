@@ -3,7 +3,7 @@ import json
 import tempfile
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from yasinfeed.models import FeedSource, Article
+from yasinfeed.models import FeedSource, Article, User, Session
 from yasinfeed.storage.base import StorageBackend
 
 class JSONStorage(StorageBackend):
@@ -22,7 +22,9 @@ class JSONStorage(StorageBackend):
 
         self.data: Dict[str, Any] = {
             "feed_sources": {},
-            "articles": {}
+            "articles": {},
+            "users": {},
+            "sessions": {}
         }
         self._load_data()
 
@@ -37,13 +39,17 @@ class JSONStorage(StorageBackend):
                         if isinstance(loaded, dict):
                             self.data = {
                                 "feed_sources": loaded.get("feed_sources", {}),
-                                "articles": loaded.get("articles", {})
+                                "articles": loaded.get("articles", {}),
+                                "users": loaded.get("users", {}),
+                                "sessions": loaded.get("sessions", {})
                             }
             except Exception:
                 # Fallback to empty data structure
                 self.data = {
                     "feed_sources": {},
-                    "articles": {}
+                    "articles": {},
+                    "users": {},
+                    "sessions": {}
                 }
 
     def _save_data(self) -> None:
@@ -149,6 +155,115 @@ class JSONStorage(StorageBackend):
             if art:
                 articles.append(art)
         return articles
+
+    def save_user(self, user: User) -> None:
+        """Saves or updates a User in the JSON store."""
+        created_str = user.created_at.isoformat() if user.created_at else datetime.now().isoformat()
+        self.data["users"][user.id] = {
+            "id": user.id,
+            "username": user.username,
+            "password_hash": user.password_hash,
+            "salt": user.salt,
+            "created_at": created_str
+        }
+        self._save_data()
+
+    def get_user(self, user_id: str) -> Optional[User]:
+        """Retrieves a User by their unique ID."""
+        raw = self.data.get("users", {}).get(user_id)
+        if not raw:
+            return None
+
+        try:
+            created_at = datetime.fromisoformat(raw["created_at"])
+        except ValueError:
+            created_at = datetime.now()
+
+        return User(
+            id=raw["id"],
+            username=raw["username"],
+            password_hash=raw["password_hash"],
+            salt=raw["salt"],
+            created_at=created_at
+        )
+
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        """Retrieves a User by their unique username."""
+        users_dict = self.data.get("users", {})
+        for user_id, raw in users_dict.items():
+            if raw.get("username") == username:
+                try:
+                    created_at = datetime.fromisoformat(raw["created_at"])
+                except ValueError:
+                    created_at = datetime.now()
+
+                return User(
+                    id=raw["id"],
+                    username=raw["username"],
+                    password_hash=raw["password_hash"],
+                    salt=raw["salt"],
+                    created_at=created_at
+                )
+        return None
+
+    def list_users(self) -> List[User]:
+        """Lists all stored User entities."""
+        users = []
+        for uid in self.data.get("users", {}):
+            user = self.get_user(uid)
+            if user:
+                users.append(user)
+        return users
+
+    def save_session(self, session: Session) -> None:
+        """Saves or updates a Session in the JSON store."""
+        created_str = session.created_at.isoformat() if session.created_at else datetime.now().isoformat()
+        expires_str = session.expires_at.isoformat() if session.expires_at else datetime.now().isoformat()
+        self.data["sessions"][session.token] = {
+            "token": session.token,
+            "user_id": session.user_id,
+            "expires_at": expires_str,
+            "created_at": created_str
+        }
+        self._save_data()
+
+    def get_session(self, token: str) -> Optional[Session]:
+        """Retrieves a Session by its unique token."""
+        raw = self.data.get("sessions", {}).get(token)
+        if not raw:
+            return None
+
+        try:
+            created_at = datetime.fromisoformat(raw["created_at"])
+        except ValueError:
+            created_at = datetime.now()
+
+        try:
+            expires_at = datetime.fromisoformat(raw["expires_at"])
+        except ValueError:
+            expires_at = datetime.now()
+
+        return Session(
+            token=raw["token"],
+            user_id=raw["user_id"],
+            expires_at=expires_at,
+            created_at=created_at
+        )
+
+    def delete_session(self, token: str) -> None:
+        """Deletes/invalidates a Session by its token."""
+        if token in self.data.get("sessions", {}):
+            del self.data["sessions"][token]
+            self._save_data()
+
+    def list_sessions(self) -> List[Session]:
+        """Lists all stored Session entities."""
+        sessions = []
+        for token in self.data.get("sessions", {}):
+            sess = self.get_session(token)
+            if sess:
+                sessions.append(sess)
+        return sessions
 
     def close(self) -> None:
         """Saves state and closes backend cleanly."""

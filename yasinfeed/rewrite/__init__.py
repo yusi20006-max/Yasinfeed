@@ -1,4 +1,5 @@
 from yasinfeed.engine import BaseModule
+from yasinfeed.models import Article
 from yasinfeed.rewrite.providers.factory import create_provider
 from yasinfeed.rewrite.providers.base import AIProviderError, AIConfigurationError
 
@@ -28,6 +29,17 @@ class RewriteModule(BaseModule):
         except Exception as e:
             self.logger.error("Failed to initialize rewrite provider %s: %s", self.provider_name, e, exc_info=True)
             return False
+
+        # Initialize the ContentPipeline with sequential stages
+        from yasinfeed.rewrite.pipeline import ContentPipeline
+        from yasinfeed.rewrite.stages import SanitizationStage, RewriteStage, TranslationStage, MetadataTaggingStage
+
+        self.pipeline = ContentPipeline([
+            SanitizationStage(),
+            RewriteStage(self.provider),
+            TranslationStage(target_lang="en"),
+            MetadataTaggingStage()
+        ])
 
         return True
 
