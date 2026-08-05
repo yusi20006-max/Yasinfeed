@@ -21,6 +21,20 @@ DEFAULT_CONFIG = {
     },
     "rewrite": {
         "provider": "dummy",
+        "openai": {
+            "api_key": None,
+            "base_url": "https://api.openai.com/v1",
+            "model": "gpt-3.5-turbo",
+            "temperature": 0.7,
+            "max_tokens": None,
+        },
+        "huggingface": {
+            "api_key": None,
+            "model": "meta-llama/Llama-3-8b-instruct",
+            "api_url": None,
+            "temperature": None,
+            "max_new_tokens": None,
+        }
     },
     "storage": {
         "type": "sqlite",
