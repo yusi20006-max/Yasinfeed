@@ -27,7 +27,7 @@ def setup_logging(config: dict) -> logging.Logger:
     logger = logging.getLogger()
     logger.setLevel(level)
 
-    # Clear existing handlers to prevent duplicates
+    # Clear existing handlers to prevent duplicates and resource leaks
     if logger.handlers:
         for handler in list(logger.handlers):
             try:
