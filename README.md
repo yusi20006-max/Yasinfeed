@@ -10,13 +10,13 @@ YasinFeed operates as a lightweight, clean, and highly modular backend service. 
 3. **Preparing Content Outputs:** Formatting data structures to prepare publishing pipelines.
 4. **Publishing Content Outputs:** Offering RSS feeds, PWA-compatible JSON endpoints, and Eitaa publishing channels.
 
-### Separation of Responsibilities
+### Separation of Responsibilities & Ecosystem Boundaries
 
 To ensure a clean architecture, responsibilities are clearly separated across distinct components:
 - **YasinFeed (This repository):** Only handles content collection, processing, and publishing stubs/pipes. It remains lightweight and modular.
-- **YasinHub:** Service management and system coordination (orchestration).
-- **Yasin-Agent:** Agent workflows, decision making, and automation.
-- **YasinCLI:** Command-line user interface.
+- **YasinHub (Do NOT implement here):** Service management and system coordination (orchestration).
+- **Yasin-Agent (Do NOT implement here):** Agent workflows, decision making, and automation.
+- **YasinCLI (Do NOT implement here):** Command-line user interface.
 
 YasinFeed **does not** function as an orchestrator, command CLI manager, or agent execution framework.
 
@@ -40,15 +40,22 @@ yasinfeed/
 └── engine.py     # Central application lifecycle manager (Initialize/Start/Stop)
 ```
 
-### Module Responsibilities
+### Module Responsibilities & Extension Points
 
 1. **`api`**: Serves as the query/delivery layer. Exposes structured PWA-compatible data sources and health endpoints.
+   - *Extension Points:* WebSockets for live updates, standardized REST/GraphQL endpoints.
 2. **`fetch`**: Handles connections to remote streams, parsing RSS feeds, and standardizing inbound content items.
+   - *Extension Points:* Scraper modules, social media stream adapters (Telegram, Twitter/X, Mastodon).
 3. **`rewrite`**: Coordinates raw content transformation. Interfaces with agent/pipeline adapters to rewrite/summarize feed text.
+   - *Extension Points:* LLM adapters (Ollama, OpenAI, Claude), multi-lingual translation APIs.
 4. **`storage`**: Deals with database/file read/write operations, supporting SQLite persistence.
+   - *Extension Points:* Pluggable backends (`SQLiteStorage`, `JSONStorage`), automated database migrations.
 5. **`scheduler`**: A cyclic task execution layer triggering automated fetching/rewriting/publishing loops.
+   - *Extension Points:* Advanced cron schedules, back-off retry timings.
 6. **`publisher`**: Adapts content to feed endpoints: Eitaa messaging, PWA client endpoints, and XML-compliant RSS.
+   - *Extension Points:* New delivery channels (Bluesky, Discord), customizable rich formatting.
 7. **`models`**: Standardizes shared entities like `Article` and `FeedSource` across all modules.
+   - *Extension Points:* Multi-layer classification metadata, tags.
 
 ---
 
