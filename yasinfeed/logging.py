@@ -30,7 +30,10 @@ def setup_logging(config: dict) -> logging.Logger:
     # Clear existing handlers to prevent duplicates and resource leaks
     if logger.handlers:
         for handler in list(logger.handlers):
-            handler.close()
+            try:
+                handler.close()
+            except Exception:
+                pass
             logger.removeHandler(handler)
 
     # Formatter
