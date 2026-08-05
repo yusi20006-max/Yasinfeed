@@ -1,6 +1,5 @@
 from yasinfeed.engine import BaseModule
-from yasinfeed.rewrite.providers.factory import create_provider
-from yasinfeed.rewrite.providers.base import AIProviderError, AIConfigurationError
+from yasinfeed.models import Article
 
 
 class RewriteModule(BaseModule):
@@ -12,6 +11,10 @@ class RewriteModule(BaseModule):
     def initialize(self) -> bool:
         self.logger.info("Initializing rewrite module...")
 
+        # Import factory and exceptions inside initialize to prevent circular loading issues
+        from yasinfeed.rewrite.providers.factory import create_provider
+        from yasinfeed.rewrite.providers.base import AIConfigurationError
+
         rewrite_config = self.config.get("rewrite", {})
         self.provider_name = rewrite_config.get("provider", "dummy")
         self.logger.info("Content rewrite provider configured: %s", self.provider_name)
@@ -22,6 +25,21 @@ class RewriteModule(BaseModule):
         try:
             self.provider = create_provider(self.provider_name, provider_config)
             self.logger.info("Content rewrite provider instantiated successfully: %s", self.provider_name)
+
+            # Setup ContentPipeline with configured stages
+            from yasinfeed.rewrite.pipeline import ContentPipeline
+            from yasinfeed.rewrite.stages import (
+                SanitizationStage,
+                RewriteStage,
+                TranslationStage,
+                MetadataTaggingStage,
+            )
+            self.pipeline = ContentPipeline([
+                SanitizationStage(),
+                RewriteStage(self.provider),
+                TranslationStage(target_lang="en"),
+                MetadataTaggingStage(),
+            ])
         except AIConfigurationError as e:
             self.logger.error("Configuration error in rewrite provider %s: %s", self.provider_name, e)
             return False
@@ -49,6 +67,8 @@ class RewriteModule(BaseModule):
         """
         self.logger.info("Rewriting content for title: %s", title)
         prompt = f"Title: {title}\nContent: {content}"
+
+        from yasinfeed.rewrite.providers.base import AIProviderError
 
         try:
             return self.provider.generate(prompt)
