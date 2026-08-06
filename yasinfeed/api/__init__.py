@@ -80,7 +80,7 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                     self.send_json({"error": "Storage module is unavailable"}, 503)
                     return
 
-                article_id = path[len("/api/api/articles/"):] if path.startswith("/api/api/") else path[len("/api/articles/"):]
+                article_id = path[len("/api/articles/"):]
                 self._handle_single_article(storage, article_id)
                 return
 
@@ -127,7 +127,13 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                     self.send_json({"error": f"Failed to retrieve scheduler status: {str(e)}"}, 500)
                 return
 
-            # 5. Not Found
+            # 5. Authenticated Feed Endpoint
+            elif path == "/api/feed":
+                response, status = api_mod.handle_get_articles(dict(self.headers))
+                self.send_json(response, status)
+                return
+
+            # 6. Not Found
             else:
                 self.send_json({"error": f"Endpoint '{path}' not found"}, 404)
                 return
