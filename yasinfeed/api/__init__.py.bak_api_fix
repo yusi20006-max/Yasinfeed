@@ -72,42 +72,7 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                     article_id = article_ids[0]
                     self._handle_single_article(storage, article_id)
                 else:
-                    page = int(query.get("page", ["1"])[0])
-                    limit = int(query.get("limit", ["10"])[0])
-
-                    articles = storage.list_articles()
-
-                    total = len(articles)
-
-                    start = (page - 1) * limit
-                    end = start + limit
-
-                    paginated = articles[start:end]
-
-                    serialized = [
-                        {
-                            "id": a.id,
-                            "title": a.title,
-                            "content": a.content,
-                            "published_at": a.published_at.isoformat()
-                            if hasattr(a.published_at, "isoformat")
-                            else str(a.published_at),
-                            "rewrite_status": a.rewrite_status
-                        }
-                        for a in paginated
-                    ]
-
-                    self.send_json(
-                        {
-                            "status": "success",
-                            "page": page,
-                            "limit": limit,
-                            "total": total,
-                            "data": serialized
-                        },
-                        200
-                    )
-
+                    self._handle_list_articles(storage)
                 return
 
             elif path.startswith("/api/articles/"):
@@ -115,7 +80,7 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                     self.send_json({"error": "Storage module is unavailable"}, 503)
                     return
 
-                article_id = path[len("/api/articles/"):]
+                article_id = path[len("/api/api/articles/"):] if path.startswith("/api/api/") else path[len("/api/articles/"):]
                 self._handle_single_article(storage, article_id)
                 return
 
@@ -162,58 +127,7 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                     self.send_json({"error": f"Failed to retrieve scheduler status: {str(e)}"}, 500)
                 return
 
-            # 5. Authenticated Feed Endpoint
-            elif path == "/api/feed":
-                response, status = api_mod.handle_get_articles(dict(self.headers))
-                self.send_json(response, status)
-                return
-
-            # 6. Dashboard Statistics
-            elif path == "/api/stats":
-                storage = engine.modules.get("storage")
-
-                if not storage:
-                    self.send_json(
-                        {"error": "Storage module unavailable"},
-                        503
-                    )
-                    return
-
-                try:
-                    articles = storage.list_articles()
-                    sources = storage.list_feed_sources()
-
-                    total_articles = len(articles)
-
-                    rewritten = len([
-                        a for a in articles
-                        if a.rewrite_status == "completed"
-                    ])
-
-                    stats = {
-                        "status": "success",
-                        "data": {
-                            "articles_total": total_articles,
-                            "rewrites_completed": rewritten,
-                            "sources_total": len(sources),
-                            "service": "YasinFeed API"
-                        }
-                    }
-
-                    self.send_json(stats, 200)
-
-                except Exception as e:
-                    self.send_json(
-                        {
-                            "status": "error",
-                            "message": str(e)
-                        },
-                        500
-                    )
-
-                return
-
-            # 7. Not Found
+            # 5. Not Found
             else:
                 self.send_json({"error": f"Endpoint '{path}' not found"}, 404)
                 return

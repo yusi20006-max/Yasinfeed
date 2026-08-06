@@ -72,42 +72,7 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                     article_id = article_ids[0]
                     self._handle_single_article(storage, article_id)
                 else:
-                    page = int(query.get("page", ["1"])[0])
-                    limit = int(query.get("limit", ["10"])[0])
-
-                    articles = storage.list_articles()
-
-                    total = len(articles)
-
-                    start = (page - 1) * limit
-                    end = start + limit
-
-                    paginated = articles[start:end]
-
-                    serialized = [
-                        {
-                            "id": a.id,
-                            "title": a.title,
-                            "content": a.content,
-                            "published_at": a.published_at.isoformat()
-                            if hasattr(a.published_at, "isoformat")
-                            else str(a.published_at),
-                            "rewrite_status": a.rewrite_status
-                        }
-                        for a in paginated
-                    ]
-
-                    self.send_json(
-                        {
-                            "status": "success",
-                            "page": page,
-                            "limit": limit,
-                            "total": total,
-                            "data": serialized
-                        },
-                        200
-                    )
-
+                    self._handle_list_articles(storage)
                 return
 
             elif path.startswith("/api/articles/"):
