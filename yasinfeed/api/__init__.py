@@ -183,6 +183,45 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
             self.server.api_module.logger.error("Failed to retrieve articles: %s", e, exc_info=True)
             self.send_json({"error": f"Failed to retrieve articles: {str(e)}"}, 500)
 
+    def do_POST(self):
+        import json
+
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
+
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+
+            data = json.loads(body.decode("utf-8"))
+
+            api = self.server.api_module
+
+            if path == "/api/auth/register":
+                response, status = api.handle_register(data)
+
+            elif path == "/api/auth/login":
+                response, status = api.handle_login(data)
+
+            else:
+                response = {
+                    "status": "error",
+                    "message": "Endpoint not found"
+                }
+                status = 404
+
+            self.send_json(response, status)
+
+        except Exception as e:
+            self.send_json(
+                {
+                    "status": "error",
+                    "message": str(e)
+                },
+                500
+            )
+
+
     def log_message(self, format: str, *args: Any) -> None:
         """Intercept standard logs and route them through the core engine's logger."""
         self.server.api_module.logger.info(format, *args)
