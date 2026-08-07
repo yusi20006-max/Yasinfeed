@@ -115,3 +115,14 @@ Run the test suite:
 ```bash
 python -m unittest discover -v
 ```
+
+---
+
+## Production Release & Deployment
+
+For production rollouts and maintenance, refer to our comprehensive deployment assets:
+
+- 📥 **[Installation Guide](docs/installation.md):** Step-by-step setup instructions for Linux and Termux.
+- 🚀 **[Deployment Guide](docs/deployment.md):** Process management (CLI, systemd, Termux-services), directory layout, and security specs.
+- 📋 **[Production Checklist](docs/production_checklist.md):** Pre-release auditing checklist for production-ready setups.
+- 📄 **[Release Notes Template](docs/release_notes_template.md):** Standard template for formatting and tracking release notes.
