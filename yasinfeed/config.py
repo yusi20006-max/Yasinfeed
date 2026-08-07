@@ -171,6 +171,43 @@ def override_from_env(config, prefix="YASINFEED_"):
             curr[last_key] = cast_value(env_val, default_v)
 
 
+class ConfigurationError(ValueError):
+    """Raised when configuration values are invalid."""
+    pass
+
+
+def validate_config(config: dict) -> None:
+    """Validate critical configuration choices and constraints."""
+    # Validate storage.type
+    storage_type = config.get("storage", {}).get("type")
+    if storage_type not in ("sqlite", "json"):
+        raise ConfigurationError(
+            f"Invalid storage type: '{storage_type}'. Allowed: 'sqlite', 'json'"
+        )
+
+    # Validate logging.level
+    log_level = config.get("logging", {}).get("level")
+    valid_levels = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+    if log_level not in valid_levels:
+        raise ConfigurationError(
+            f"Invalid logging level: '{log_level}'. Allowed: {valid_levels}"
+        )
+
+    # Validate fetch.interval_seconds
+    interval = config.get("fetch", {}).get("interval_seconds")
+    if not isinstance(interval, int) or interval < 1:
+        raise ConfigurationError(
+            f"Invalid fetch interval: {interval}. Must be an integer >= 1"
+        )
+
+    # Validate api.port
+    port = config.get("api", {}).get("port")
+    if not isinstance(port, int) or port < 0 or port > 65535:
+        raise ConfigurationError(
+            f"Invalid API port: {port}. Must be an integer in 0-65535 range"
+        )
+
+
 def load_config(config_path=None) -> dict:
     """
     Loads configuration.
@@ -207,5 +244,21 @@ def load_config(config_path=None) -> dict:
 
     # Override with environment variables
     override_from_env(merged_config)
+
+    # Validate config
+    validate_config(merged_config)
+
+    # Automatically ensure directory paths exist
+    storage_path = merged_config.get("storage", {}).get("path")
+    if storage_path:
+        storage_dir = os.path.dirname(storage_path)
+        if storage_dir:
+            os.makedirs(storage_dir, exist_ok=True)
+
+    log_file_path = merged_config.get("logging", {}).get("file_path")
+    if log_file_path:
+        log_dir = os.path.dirname(log_file_path)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
 
     return merged_config

@@ -102,7 +102,8 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                             "published_at": a.published_at.isoformat()
                             if hasattr(a.published_at, "isoformat")
                             else str(a.published_at),
-                            "rewrite_status": a.rewrite_status
+                            "rewrite_status": a.rewrite_status,
+                            "pipeline_metadata": getattr(a, "pipeline_metadata", {})
                         }
                         for a in paginated
                     ]
@@ -263,7 +264,11 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             api_mod.logger.error("Unexpected error in API request handler: %s", e, exc_info=True)
-            self.send_json({"error": f"Internal Server Error: {str(e)}"}, 500)
+            self.send_json({
+                "status": "error",
+                "error": f"Internal Server Error: {str(e)}",
+                "message": str(e)
+            }, 500)
 
     def _handle_single_article(self, storage: Any, article_id: str) -> None:
         """Helper to fetch and serialize a single article."""
@@ -282,7 +287,8 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                 "published_at": article.published_at.isoformat() if hasattr(article.published_at, "isoformat") else str(article.published_at),
                 "rewritten_content": article.rewritten_content,
                 "rewrite_status": article.rewrite_status,
-                "published_outputs": article.published_outputs
+                "published_outputs": article.published_outputs,
+                "pipeline_metadata": getattr(article, "pipeline_metadata", {})
             }
             self.send_json(serialized, 200)
         except Exception as e:
@@ -303,7 +309,8 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                     "published_at": a.published_at.isoformat() if hasattr(a.published_at, "isoformat") else str(a.published_at),
                     "rewritten_content": a.rewritten_content,
                     "rewrite_status": a.rewrite_status,
-                    "published_outputs": a.published_outputs
+                    "published_outputs": a.published_outputs,
+                    "pipeline_metadata": getattr(a, "pipeline_metadata", {})
                 }
                 for a in articles
             ]
@@ -328,7 +335,18 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length)
 
-            data = json.loads(body.decode("utf-8"))
+            try:
+                data = json.loads(body.decode("utf-8"))
+            except (json.JSONDecodeError, ValueError) as json_err:
+                self.send_json(
+                    {
+                        "status": "error",
+                        "error": "Invalid JSON format",
+                        "message": f"Failed to parse request payload: {str(json_err)}"
+                    },
+                    400
+                )
+                return
 
             if path == "/api/auth/register":
                 response, status = api.handle_register(data)
@@ -339,6 +357,7 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
             else:
                 response = {
                     "status": "error",
+                    "error": "Not Found",
                     "message": "Endpoint not found"
                 }
                 status = 404
@@ -346,9 +365,11 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
             self.send_json(response, status)
 
         except Exception as e:
+            api.logger.error("Unexpected error in API POST request: %s", e, exc_info=True)
             self.send_json(
                 {
                     "status": "error",
+                    "error": "Internal Server Error",
                     "message": str(e)
                 },
                 500
@@ -477,7 +498,8 @@ class ApiModule(BaseModule):
                 "original_url": a.original_url,
                 "published_at": a.published_at.isoformat(),
                 "rewritten_content": a.rewritten_content,
-                "rewrite_status": a.rewrite_status
+                "rewrite_status": a.rewrite_status,
+                "pipeline_metadata": getattr(a, "pipeline_metadata", {})
             }
             for a in articles
         ]

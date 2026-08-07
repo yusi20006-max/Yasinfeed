@@ -43,12 +43,23 @@ class RewriteModule(BaseModule):
             return False
 
         from yasinfeed.rewrite.pipeline import ContentPipeline
-        from yasinfeed.rewrite.stages import SanitizationStage, RewriteStage, TranslationStage, MetadataTaggingStage
+        from yasinfeed.rewrite.stages import (
+            SanitizationStage,
+            RewriteStage,
+            TranslationStage,
+            ContentAnalysisStage,
+            MetadataTaggingStage
+        )
+
+        # ContentAnalysisStage is configuration-driven and optional
+        intelligence_config = self.config.get("rewrite", {}).get("intelligence", {})
+        intelligence_enabled = intelligence_config.get("enabled", True)
 
         self.pipeline = ContentPipeline([
             SanitizationStage(),
             RewriteStage(self.provider),
             TranslationStage(target_lang="en"),
+            ContentAnalysisStage(enabled=intelligence_enabled),
             MetadataTaggingStage()
         ])
 
