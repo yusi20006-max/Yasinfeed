@@ -117,6 +117,10 @@ class FetchModule(BaseModule):
                     )
 
 
+                monitoring = self.engine.modules.get("monitoring")
+                if monitoring:
+                    monitoring.metrics.inc("articles_fetched", len(feed.entries))
+
                 self.logger.info(
                     "Fetched %d items from %s",
                     len(feed.entries),
