@@ -40,6 +40,12 @@ class TestEngine(unittest.TestCase):
         success = engine.initialize()
         self.assertTrue(success)
 
+        # Avoid port collision by assigning port 0 (dynamic allocation)
+        if "api" in engine.modules:
+            engine.modules["api"].port = 0
+        if "api" in engine.config:
+            engine.config["api"]["port"] = 0
+
         # Let's run start in a background thread so we can stop it
         def run_engine():
             engine.start()
