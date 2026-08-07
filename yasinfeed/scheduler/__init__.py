@@ -40,11 +40,17 @@ class SchedulerModule(BaseModule):
         using the StorageModule, rewrites them using the RewriteModule,
         and distributes/publishes the rewritten articles via the PublisherModule.
         """
-        self.logger.info("Executing automated fetch_and_process pipeline...")
-
         monitoring = self.engine.modules.get("monitoring")
         if monitoring:
             monitoring.metrics.inc("fetch_cycles")
+            with monitoring.metrics.timing("fetch_and_process_pipeline"):
+                self._do_fetch_and_process()
+        else:
+            self._do_fetch_and_process()
+
+    def _do_fetch_and_process(self) -> None:
+        self.logger.info("Executing automated fetch_and_process pipeline...")
+        monitoring = self.engine.modules.get("monitoring")
 
         # Access sibling modules via engine
         storage = self.engine.modules.get("storage")

@@ -25,6 +25,8 @@ MANIFEST
 # Logs
 *.log
 yasinfeed.log
+config/events.json
+events.json
 
 # Databases
 *.db

@@ -304,6 +304,12 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                             "service": "YasinFeed API"
                         }
                     }
+                    if monitoring:
+                        stats["data"]["metrics"] = monitoring.metrics.all()
+                        stats["data"]["errors"] = {
+                            "total_errors": monitoring.metrics.get("total_errors") or 0,
+                            "last_errors": monitoring.metrics.get_errors()
+                        }
 
                     self.send_json(stats, 200)
 
