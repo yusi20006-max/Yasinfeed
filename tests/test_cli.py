@@ -23,7 +23,7 @@ class TestCLIExtended(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 0)
         self.assertIn("YasinFeed CLI v0.1", r.stdout)
-        self.assertIn("YasinFeed Engine v0.1.0", r.stdout)
+        self.assertIn("YasinFeed Engine v0.2.0", r.stdout)
 
     @patch("sys.stdout", new_callable=io.StringIO)
     def test_version_subcommand_direct(self, mock_stdout):
@@ -31,7 +31,7 @@ class TestCLIExtended(unittest.TestCase):
         main()
         output = mock_stdout.getvalue()
         self.assertIn("YasinFeed CLI v0.1", output)
-        self.assertIn("YasinFeed Engine v0.1.0", output)
+        self.assertIn("YasinFeed Engine v0.2.0", output)
 
     @patch("sys.stdout", new_callable=io.StringIO)
     @patch("yasinfeed.cli.main.load_config")

@@ -343,8 +343,9 @@ def handle_config(args):
 
 def handle_version(args):
     """Display CLI and Engine version."""
+    from yasinfeed import __version__
     print("YasinFeed CLI v0.1")
-    print("YasinFeed Engine v0.1.0")
+    print(f"YasinFeed Engine v{__version__}")
 
 
 def main():
