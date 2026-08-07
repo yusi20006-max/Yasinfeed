@@ -1,6 +1,6 @@
-# YasinFeed - Authentication Layer
+# YasinFeed - Authentication & Security Layer
 
-The YasinFeed Authentication Layer provides a lightweight, modular, and highly secure subsystem for user and session/token management within the YasinFeed Core.
+The YasinFeed Authentication & Security Layer provides a lightweight, modular, and highly secure subsystem for user/session/token management, API key validation, role-based authorization, and rate-limiting within the YasinFeed Core.
 
 ---
 
@@ -19,84 +19,58 @@ YasinFeed prioritizes security and minimal dependencies, enabling native, zero-d
 - Tokens have a configurable expiration window (default is 24 hours).
 - Expired tokens are automatically recognized as invalid and invalidated upon access.
 
+### API Key Validation
+- Direct API key authentication is supported via both the `X-API-Key` header and the `Authorization: Key <api_key>` header format.
+- A secure admin API key can be defined in configuration for direct machine-to-machine integrations.
+
 ---
 
-## 2. Configuration Options
+## 2. Permission Model
 
-Configure the authentication layer within the `config/config.yaml` file under the `auth` section:
+YasinFeed implements a role-based access control (RBAC) permission model mapping roles to specific system permissions:
+
+| Role | Permissions | Description |
+|---|---|---|
+| `admin` | `read:articles`, `write:articles`, `read:sources`, `write:sources`, `read:scheduler`, `write:scheduler`, `read:stats`, `admin` | Full read/write access to all resources and management APIs. |
+| `viewer` | `read:articles`, `read:stats` | Read-only access to compiled feeds, articles, and dashboard statistics. |
+
+Enforced permissions on REST API endpoints when security is enabled:
+- `GET /api/articles` / `GET /api/feed` -> Requires `read:articles`
+- `GET /api/sources` -> Requires `read:sources`
+- `GET /api/scheduler` -> Requires `read:scheduler`
+- `GET /api/stats` -> Requires `read:stats`
+
+---
+
+## 3. Configuration Options
+
+Configure the security settings inside the `config/config.yaml` file under the `api.security` section:
 
 ```yaml
-auth:
-  token_expiry_hours: 24       # Expiration window for generated session tokens
-  min_password_length: 8       # Minimum character length allowed for user registration
-  pbkdf2_iterations: 100000    # Iterations count used for PBKDF2 hashing
+api:
+  host: 127.0.0.1
+  port: 8000
+  security:
+    enabled: true                  # Set to true to enforce authentication and permissions
+    rate_limit_per_minute: 60      # Max requests per minute per IP address
+    admin_api_key: "my-secure-key" # Machine-to-machine Admin API key
+    token_expiry_hours: 24         # Duration of session tokens in hours
 ```
 
 ---
 
-## 3. Storage Data Models & Schemas
+## 4. Rate Limiting Middleware
 
-The authentication layer integrates directly with the Storage Module supporting both `SQLiteStorage` and `JSONStorage` backends.
-
-### User Model
-```python
-@dataclass
-class User:
-    id: str               # Unique UUIDv4 string
-    username: str         # Unique username
-    password_hash: str    # Hex-encoded PBKDF2-SHA256 password hash
-    salt: str             # Hex-encoded unique salt
-    created_at: datetime  # Time of registration
-```
-
-### Session Model
-```python
-@dataclass
-class Session:
-    token: str            # High-entropy random token hex
-    user_id: str          # Owner user ID
-    expires_at: datetime  # Session expiration timestamp
-    created_at: datetime  # Session creation timestamp
-```
-
-### SQLite Schema Definitions
-```sql
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    salt TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-    token TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    expires_at TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-```
+A rolling-window IP-based rate limiting foundation is integrated directly into the API request handler. When the limit is exceeded, the server responds with a standard `429 Too Many Requests` status code and JSON payload.
 
 ---
 
-## 4. API Layer Integration
+## 5. Security Headers
 
-The API module (`yasinfeed/api/__init__.py`) provides simulated, REST-compliant endpoint handlers mapping directly to underlying `AuthModule` actions.
-
-### Register User
-**Method:** `handle_register(self, request_data: dict) -> tuple`
-- Simulates `POST /api/auth/register`
-- Expects `username` and `password` in payload.
-- Returns status code `201` on success, `400` on validation failure / duplicate username, or `500` on server error.
-
-### User Login
-**Method:** `handle_login(self, request_data: dict) -> tuple`
-- Simulates `POST /api/auth/login`
-- Verifies password against hashed values.
-- On success, returns `200` with the generated session `token` and `expires_at` timestamp. Returns `401` on invalid credentials.
-
-### Protected Endpoint Check
-**Method:** `handle_get_articles(self, headers: dict) -> tuple`
-- Simulates `GET /api/feed`
-- Requires `Authorization: Bearer <token>` header.
-- On successful validation of token, returns the requested content items. Returns `401` if token is missing, invalid, or expired.
+To protect clients and prevent exploits, the REST server automatically injects strong security headers in all JSON responses:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains` (HSTS)
+- Standard CORS headers enabling safe integration.

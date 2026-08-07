@@ -61,6 +61,24 @@ yasinfeed/
 
 ---
 
+## Multi-Source Aggregation & Security
+
+### Multi-Source Aggregation Flow
+YasinFeed includes production-ready multi-source feed aggregation. It supports:
+- **Source Priorities & Weighting**: Configure priority and weights for feed sources to resolve duplicate content.
+- **Reliability Scoring**: Dynamic tracking of feed success rates and automatic score updating.
+- **Failure Isolation**: Intermittent failures in any single source do not block other feeds.
+- **Duplicate Detection & Content Merge**: Groups articles with identical links or titles, choosing between keeping highest ranking metadata (`priority`) or concatenating source contents (`combine`).
+
+### Security Architecture
+A layered API security foundation protects REST API endpoints:
+- **IP-Based Rate Limiting**: Automatic throttling of excessive requests.
+- **API Keys & Session Tokens**: Verify clients using tokens or admin-defined API Keys (`X-API-Key`).
+- **Role-Based Permissions**: Users have specific permissions based on roles (`admin`, `viewer`).
+- **Security Headers**: Standard headers are injected into all HTTP responses.
+
+---
+
 ## Configuration
 
 YasinFeed supports multi-tiered configuration loading.

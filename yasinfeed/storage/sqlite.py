@@ -42,6 +42,21 @@ class SQLiteStorage(StorageBackend):
         )
         """)
 
+        # Ensure multi-source aggregation columns exist (backward compatibility migration)
+        for col_name, col_type, default_val in [
+            ("priority", "INTEGER", "1"),
+            ("weight", "REAL", "1.0"),
+            ("reliability_score", "REAL", "1.0"),
+            ("fetch_count", "INTEGER", "0"),
+            ("success_count", "INTEGER", "0"),
+            ("failure_count", "INTEGER", "0"),
+            ("last_error", "TEXT", "NULL")
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE feed_sources ADD COLUMN {col_name} {col_type} DEFAULT {default_val}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
+
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS articles (
@@ -68,6 +83,11 @@ class SQLiteStorage(StorageBackend):
         )
         """)
 
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'viewer'")
+        except sqlite3.OperationalError:
+            pass
+
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
@@ -88,13 +108,20 @@ class SQLiteStorage(StorageBackend):
         cursor.execute(
             """
             INSERT INTO feed_sources
-            (id, name, url, enabled, last_fetched_at)
-            VALUES (?, ?, ?, ?, ?)
+            (id, name, url, enabled, last_fetched_at, priority, weight, reliability_score, fetch_count, success_count, failure_count, last_error)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
             name=excluded.name,
             url=excluded.url,
             enabled=excluded.enabled,
-            last_fetched_at=excluded.last_fetched_at
+            last_fetched_at=excluded.last_fetched_at,
+            priority=excluded.priority,
+            weight=excluded.weight,
+            reliability_score=excluded.reliability_score,
+            fetch_count=excluded.fetch_count,
+            success_count=excluded.success_count,
+            failure_count=excluded.failure_count,
+            last_error=excluded.last_error
             """,
             (
                 feed_source.id,
@@ -103,7 +130,14 @@ class SQLiteStorage(StorageBackend):
                 1 if feed_source.enabled else 0,
                 feed_source.last_fetched_at.isoformat()
                 if getattr(feed_source, "last_fetched_at", None)
-                else None
+                else None,
+                getattr(feed_source, "priority", 1),
+                getattr(feed_source, "weight", 1.0),
+                getattr(feed_source, "reliability_score", 1.0),
+                getattr(feed_source, "fetch_count", 0),
+                getattr(feed_source, "success_count", 0),
+                getattr(feed_source, "failure_count", 0),
+                getattr(feed_source, "last_error", None)
             )
         )
 
@@ -130,12 +164,20 @@ class SQLiteStorage(StorageBackend):
             except ValueError:
                 pass
 
+        keys = row.keys()
         return FeedSource(
             id=row["id"],
             name=row["name"],
             url=row["url"],
             enabled=bool(row["enabled"]),
-            last_fetched_at=last_fetched_at
+            last_fetched_at=last_fetched_at,
+            priority=row["priority"] if "priority" in keys else 1,
+            weight=row["weight"] if "weight" in keys else 1.0,
+            reliability_score=row["reliability_score"] if "reliability_score" in keys else 1.0,
+            fetch_count=row["fetch_count"] if "fetch_count" in keys else 0,
+            success_count=row["success_count"] if "success_count" in keys else 0,
+            failure_count=row["failure_count"] if "failure_count" in keys else 0,
+            last_error=row["last_error"] if "last_error" in keys else None
         )
 
 
@@ -156,13 +198,21 @@ class SQLiteStorage(StorageBackend):
                     last_fetched_at = datetime.fromisoformat(row["last_fetched_at"])
                 except ValueError:
                     pass
+            keys = row.keys()
             sources.append(
                 FeedSource(
                     id=row["id"],
                     name=row["name"],
                     url=row["url"],
                     enabled=bool(row["enabled"]),
-                    last_fetched_at=last_fetched_at
+                    last_fetched_at=last_fetched_at,
+                    priority=row["priority"] if "priority" in keys else 1,
+                    weight=row["weight"] if "weight" in keys else 1.0,
+                    reliability_score=row["reliability_score"] if "reliability_score" in keys else 1.0,
+                    fetch_count=row["fetch_count"] if "fetch_count" in keys else 0,
+                    success_count=row["success_count"] if "success_count" in keys else 0,
+                    failure_count=row["failure_count"] if "failure_count" in keys else 0,
+                    last_error=row["last_error"] if "last_error" in keys else None
                 )
             )
         return sources
@@ -264,13 +314,14 @@ class SQLiteStorage(StorageBackend):
         cursor.execute(
             """
             INSERT INTO users
-            (id, username, password_hash, salt, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            (id, username, password_hash, salt, created_at, role)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
             username=excluded.username,
             password_hash=excluded.password_hash,
             salt=excluded.salt,
-            created_at=excluded.created_at
+            created_at=excluded.created_at,
+            role=excluded.role
             """,
             (
                 user.id,
@@ -279,7 +330,8 @@ class SQLiteStorage(StorageBackend):
                 user.salt,
                 user.created_at.isoformat()
                 if getattr(user, "created_at", None)
-                else datetime.now().isoformat()
+                else datetime.now().isoformat(),
+                getattr(user, "role", "viewer")
             )
         )
 
@@ -299,14 +351,14 @@ class SQLiteStorage(StorageBackend):
         if not row:
             return None
 
+        keys = row.keys()
         return User(
             id=row["id"],
             username=row["username"],
             password_hash=row["password_hash"],
             salt=row["salt"],
-            created_at=datetime.fromisoformat(row["created_at"])
-            if row["created_at"]
-            else None
+            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+            role=row["role"] if "role" in keys else "viewer"
         )
 
 
@@ -323,14 +375,14 @@ class SQLiteStorage(StorageBackend):
         if not row:
             return None
 
+        keys = row.keys()
         return User(
             id=row["id"],
             username=row["username"],
             password_hash=row["password_hash"],
             salt=row["salt"],
-            created_at=datetime.fromisoformat(row["created_at"])
-            if row["created_at"]
-            else None
+            created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+            role=row["role"] if "role" in keys else "viewer"
         )
 
 
@@ -343,15 +395,20 @@ class SQLiteStorage(StorageBackend):
 
         rows = cursor.fetchall()
 
-        return [
-            User(
-                id=row["id"],
-                username=row["username"],
-                password_hash=row["password_hash"],
-                salt=row["salt"]
+        users = []
+        for row in rows:
+            keys = row.keys()
+            users.append(
+                User(
+                    id=row["id"],
+                    username=row["username"],
+                    password_hash=row["password_hash"],
+                    salt=row["salt"],
+                    created_at=datetime.fromisoformat(row["created_at"]) if row["created_at"] else None,
+                    role=row["role"] if "role" in keys else "viewer"
+                )
             )
-            for row in rows
-        ]
+        return users
 
 
     def save_session(self, session):
