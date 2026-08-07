@@ -123,11 +123,19 @@ class SQLiteStorage(StorageBackend):
         if not row:
             return None
 
+        last_fetched_at = None
+        if "last_fetched_at" in row.keys() and row["last_fetched_at"]:
+            try:
+                last_fetched_at = datetime.fromisoformat(row["last_fetched_at"])
+            except ValueError:
+                pass
+
         return FeedSource(
             id=row["id"],
             name=row["name"],
             url=row["url"],
-            enabled=bool(row["enabled"])
+            enabled=bool(row["enabled"]),
+            last_fetched_at=last_fetched_at
         )
 
 
@@ -140,15 +148,24 @@ class SQLiteStorage(StorageBackend):
 
         rows = cursor.fetchall()
 
-        return [
-            FeedSource(
-                id=row["id"],
-                name=row["name"],
-                url=row["url"],
-                enabled=bool(row["enabled"])
+        sources = []
+        for row in rows:
+            last_fetched_at = None
+            if "last_fetched_at" in row.keys() and row["last_fetched_at"]:
+                try:
+                    last_fetched_at = datetime.fromisoformat(row["last_fetched_at"])
+                except ValueError:
+                    pass
+            sources.append(
+                FeedSource(
+                    id=row["id"],
+                    name=row["name"],
+                    url=row["url"],
+                    enabled=bool(row["enabled"]),
+                    last_fetched_at=last_fetched_at
+                )
             )
-            for row in rows
-        ]
+        return sources
 
 
     def save_article(self, article):

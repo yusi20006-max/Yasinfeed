@@ -21,5 +21,9 @@ class APIKeyAuth:
         return key in self._keys
 
 
+    def verify(self, key):
+        return self.validate(key)
+
+
     def revoke(self, key):
         self._keys.discard(key)

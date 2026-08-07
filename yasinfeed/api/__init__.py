@@ -48,15 +48,23 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
         storage = engine.modules.get("storage")
         scheduler_mod = engine.modules.get("scheduler")
 
+        # Increment api_requests metric
+        monitoring = engine.modules.get("monitoring")
+        if monitoring:
+            monitoring.metrics.inc("api_requests")
+
         # Route matching
         try:
             # 1. Health endpoint
             if path == "/health" or path == "/api/health":
-                health_data = {
-                    "status": "ok",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "service": "YasinFeed API Layer"
-                }
+                if monitoring:
+                    health_data = monitoring.get_system_status()
+                else:
+                    health_data = {
+                        "status": "ok",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "service": "YasinFeed API Layer"
+                    }
                 self.send_json(health_data, 200)
                 return
 
@@ -71,6 +79,8 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                 if article_ids:
                     article_id = article_ids[0]
                     self._handle_single_article(storage, article_id)
+                elif "page" not in query and "limit" not in query:
+                    self._handle_list_articles(storage)
                 else:
                     page = int(query.get("page", ["1"])[0])
                     limit = int(query.get("limit", ["10"])[0])
@@ -308,13 +318,17 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
         parsed_url = urlparse(self.path)
         path = parsed_url.path
 
+        api = self.server.api_module
+        engine = api.engine
+        monitoring = engine.modules.get("monitoring")
+        if monitoring:
+            monitoring.metrics.inc("api_requests")
+
         try:
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length)
 
             data = json.loads(body.decode("utf-8"))
-
-            api = self.server.api_module
 
             if path == "/api/auth/register":
                 response, status = api.handle_register(data)
