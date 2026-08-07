@@ -8,6 +8,9 @@ class BaseStage(ABC):
     """
     Abstract base class for all processing stages in the Content Pipeline.
     """
+    def __init__(self, critical: bool = True):
+        self.critical = critical
+
     @abstractmethod
     def process(self, article: Article) -> Article:
         """
@@ -15,11 +18,21 @@ class BaseStage(ABC):
         """
         pass
 
+    def fallback(self, article: Article, exception: Exception) -> Article:
+        """
+        Provides a recovery mechanism if the stage fails during execution.
+        By default, returns the unaltered article.
+        """
+        return article
+
 
 class SanitizationStage(BaseStage):
     """
     Removes HTML tags and normalizes whitespace/newlines from article title and content.
     """
+    def __init__(self, critical: bool = True):
+        super().__init__(critical=critical)
+
     def process(self, article: Article) -> Article:
         # Regex to strip HTML tags
         html_re = re.compile(r'<[^>]+>')
@@ -47,7 +60,8 @@ class RewriteStage(BaseStage):
     Uses the configured BaseProvider to perform content rewriting and summarization.
     Updates rewritten_content and sets rewrite_status to 'completed'.
     """
-    def __init__(self, provider: BaseProvider):
+    def __init__(self, provider: BaseProvider, critical: bool = True):
+        super().__init__(critical=critical)
         self.provider = provider
 
     def process(self, article: Article) -> Article:
@@ -62,7 +76,8 @@ class TranslationStage(BaseStage):
     Simulates content translation (e.g. into English/Persian).
     Appends a simulation tag or performs a mock translation if needed.
     """
-    def __init__(self, target_lang: str = "en"):
+    def __init__(self, target_lang: str = "en", critical: bool = False):
+        super().__init__(critical=critical)
         self.target_lang = target_lang
 
     def process(self, article: Article) -> Article:
@@ -82,7 +97,8 @@ class MetadataTaggingStage(BaseStage):
     or we can append them directly to the rewritten content as hash tags, or print metadata logs.
     Let's add generic keywords detection and append hashtags to the rewritten_content.
     """
-    def __init__(self, keywords_map: dict = None):
+    def __init__(self, keywords_map: dict = None, critical: bool = False):
+        super().__init__(critical=critical)
         # Default keywords mapping
         self.keywords_map = keywords_map or {
             "ai": ["ai", "artificial intelligence", "machine learning", "llm", "ollama"],
@@ -103,4 +119,34 @@ class MetadataTaggingStage(BaseStage):
             hashtags = " ".join([f"#{t}" for t in extracted_tags])
             article.rewritten_content = f"{article.rewritten_content}\n\nTags: {hashtags}"
 
+        return article
+
+
+class ContentAnalysisStage(BaseStage):
+    """
+    Executes advanced semantic and structured analysis (sentiment, readability, topics)
+    and stores results within the article's pipeline_metadata section.
+    Is optional, provider-agnostic, and non-critical by default.
+    """
+    def __init__(self, enabled: bool = True, critical: bool = False):
+        super().__init__(critical=critical)
+        self.enabled = enabled
+        if enabled:
+            from yasinfeed.rewrite.intelligence import ContentIntelligenceEngine
+            self.engine = ContentIntelligenceEngine()
+
+    def process(self, article: Article) -> Article:
+        if not self.enabled:
+            return article
+
+        text_for_analysis_title = article.title
+        text_for_analysis_content = article.rewritten_content or article.content
+
+        # Run semantic analysis
+        analysis_result = self.engine.analyze(text_for_analysis_title, text_for_analysis_content)
+
+        if not hasattr(article, "pipeline_metadata") or article.pipeline_metadata is None:
+            article.pipeline_metadata = {}
+
+        article.pipeline_metadata["intelligence"] = analysis_result
         return article

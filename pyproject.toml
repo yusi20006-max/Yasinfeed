@@ -21,6 +21,9 @@ dev = [
     "pytest>=7.0.0",
 ]
 
+[project.scripts]
+yasinfeed = "yasinfeed.cli.main:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["yasinfeed*"]
