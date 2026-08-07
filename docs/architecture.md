@@ -143,3 +143,28 @@ Upon receiving `SIGINT` (Ctrl+C) or `SIGTERM`:
 2. Loops through modules in **reverse order** (`api` first, `storage` last) calling `.stop()`.
 3. Modules close active connections, cancel timers, and release bound ports cleanly.
 4. Main thread finishes sleep loop and exits.
+
+---
+
+## Multi-Source Aggregation Flow
+
+YasinFeed aggregates content fetched from multiple sources, manages priorities/weights, and detects duplicates:
+
+1. **Failure-Isolated Fetch Loop**: The `FetchModule` queries all enabled `FeedSource` entities from database. Each fetch runs independently. If one feed fails (e.g., timeout), the failure is isolated and other sources are fetched normally.
+2. **Reliability Tracking**: With every fetch cycle, source statistics (`fetch_count`, `success_count`, `failure_count`, `last_error`) are updated, and the source `reliability_score` is dynamically calculated and saved back to storage.
+3. **Improved Retries**: Feed fetches employ exponential backoff with configurable retries to handle intermittent network failures.
+4. **Duplicate Detection across Sources**: Fetched articles are grouped together by identical URL/ID or normalized title similarity.
+5. **Content Merge Strategy**: For duplicates, a merge strategy determines the final content:
+   - `priority`: Sorts duplicate candidates by source priority, weight, and reliability score, keeping the article from the highest-ranked source.
+   - `combine`: Merges unique content sections across all sources into a single unified article.
+
+---
+
+## Security Architecture
+
+The API and Authentication modules implement layered security middleware:
+
+1. **IP-Based Rate Limiting**: REST request handlers enforce strict, rolling-window request rate limits to prevent denial-of-service and brute-force attacks.
+2. **Security Headers**: Standard headers are injected into all HTTP responses (`X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Content-Security-Policy`, and `Strict-Transport-Security`).
+3. **API Key & Token Authentication**: Support for both session tokens (Bearer tokens) and system-wide API keys (`X-API-Key` or `Authorization: Key <api_key>`).
+4. **Role-Based Permission Enforcement**: Protects sensitive endpoints by matching user roles (`admin` or `viewer`) against required route permissions before serving resources.

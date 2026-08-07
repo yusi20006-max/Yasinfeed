@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, List, Optional
@@ -21,8 +22,14 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(response_bytes)))
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
+            # Security Headers Middleware
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("X-XSS-Protection", "1; mode=block")
+            self.send_header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+            self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
             self.end_headers()
             self.wfile.write(response_bytes)
         except Exception as e:
@@ -32,12 +39,41 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
         """Handle CORS preflight requests."""
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
         self.end_headers()
+
+    def check_rate_limit(self) -> bool:
+        """
+        Lightweight IP-based rolling window rate limiting foundation.
+        Returns True if allowed, False if rate limited.
+        """
+        api_mod = self.server.api_module
+        security_config = api_mod.config.get("api", {}).get("security", {})
+        limit = security_config.get("rate_limit_per_minute", 60)
+
+        if not hasattr(self.server, "rate_limit_records"):
+            self.server.rate_limit_records = {}
+
+        client_ip = self.client_address[0]
+        now = time.time()
+
+        records = self.server.rate_limit_records.setdefault(client_ip, [])
+        records = [t for t in records if now - t < 60]
+        self.server.rate_limit_records[client_ip] = records
+
+        if len(records) >= limit:
+            return False
+
+        records.append(now)
+        return True
 
     def do_GET(self) -> None:
         """Handle REST GET requests."""
+        if not self.check_rate_limit():
+            self.send_json({"error": "Too Many Requests", "message": "Rate limit exceeded. Please try again later."}, 429)
+            return
+
         parsed_url = urlparse(self.path)
         path = parsed_url.path
         query = parse_qs(parsed_url.query)
@@ -52,6 +88,57 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
         monitoring = engine.modules.get("monitoring")
         if monitoring:
             monitoring.metrics.inc("api_requests")
+
+        # Extract security settings and authenticate client
+        security_enabled = api_mod.config.get("api", {}).get("security", {}).get("enabled", False)
+
+        auth_header = self.headers.get("Authorization", "")
+        api_key_header = self.headers.get("X-API-Key", "")
+
+        current_user = None
+        authenticated = False
+
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+            auth_mod = engine.modules.get("auth")
+            if auth_mod:
+                current_user = auth_mod.authenticate_token(token)
+                if current_user:
+                    authenticated = True
+        elif auth_header.startswith("Key "):
+            key = auth_header[4:].strip()
+            auth_mod = engine.modules.get("auth")
+            if auth_mod and auth_mod.validate_api_key(key):
+                authenticated = True
+                from yasinfeed.models import User
+                current_user = User(id="admin_api_key", username="admin_api_key", role="admin")
+        elif api_key_header:
+            key = api_key_header.strip()
+            auth_mod = engine.modules.get("auth")
+            if auth_mod and auth_mod.validate_api_key(key):
+                authenticated = True
+                from yasinfeed.models import User
+                current_user = User(id="admin_api_key", username="admin_api_key", role="admin")
+
+        # Determine required permission for the route
+        required_permission = None
+        if path == "/api/articles" or path.startswith("/api/articles/") or path == "/api/feed":
+            required_permission = "read:articles"
+        elif path == "/api/sources":
+            required_permission = "read:sources"
+        elif path == "/api/scheduler":
+            required_permission = "read:scheduler"
+        elif path == "/api/stats":
+            required_permission = "read:stats"
+
+        if security_enabled and required_permission:
+            if not authenticated:
+                self.send_json({"error": "Unauthorized", "message": "Authentication required via Bearer Token or X-API-Key"}, 401)
+                return
+            auth_mod = engine.modules.get("auth")
+            if not auth_mod or not auth_mod.has_permission(current_user, required_permission):
+                self.send_json({"error": "Forbidden", "message": f"Required permission '{required_permission}' missing"}, 403)
+                return
 
         # Route matching
         try:
@@ -144,7 +231,14 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                             "url": s.url,
                             "name": s.name,
                             "enabled": s.enabled,
-                            "last_fetched_at": s.last_fetched_at.isoformat() if s.last_fetched_at and hasattr(s.last_fetched_at, "isoformat") else None
+                            "last_fetched_at": s.last_fetched_at.isoformat() if s.last_fetched_at and hasattr(s.last_fetched_at, "isoformat") else None,
+                            "priority": getattr(s, "priority", 1),
+                            "weight": getattr(s, "weight", 1.0),
+                            "reliability_score": getattr(s, "reliability_score", 1.0),
+                            "fetch_count": getattr(s, "fetch_count", 0),
+                            "success_count": getattr(s, "success_count", 0),
+                            "failure_count": getattr(s, "failure_count", 0),
+                            "last_error": getattr(s, "last_error", None)
                         }
                         for s in sources
                     ]
@@ -321,6 +415,9 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         import json
+        if not self.check_rate_limit():
+            self.send_json({"error": "Too Many Requests", "message": "Rate limit exceeded. Please try again later."}, 429)
+            return
 
         parsed_url = urlparse(self.path)
         path = parsed_url.path
@@ -349,9 +446,20 @@ class YasinFeedAPIRequestHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/api/auth/register":
+                # Request validation check
+                if not data.get("username") or not data.get("password"):
+                    self.send_json({"status": "error", "error": "Bad Request", "message": "username and password are required"}, 400)
+                    return
+                if len(data["username"]) < 3 or len(data["password"]) < 6:
+                    self.send_json({"status": "error", "error": "Bad Request", "message": "username must be at least 3 chars and password at least 6 chars"}, 400)
+                    return
                 response, status = api.handle_register(data)
 
             elif path == "/api/auth/login":
+                # Request validation check
+                if not data.get("username") or not data.get("password"):
+                    self.send_json({"status": "error", "error": "Bad Request", "message": "username and password are required"}, 400)
+                    return
                 response, status = api.handle_login(data)
 
             else:

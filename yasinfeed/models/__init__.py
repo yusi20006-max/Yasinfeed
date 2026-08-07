@@ -15,6 +15,7 @@ class User:
     password_hash: str = ""
     salt: str = ""
     created_at: Optional[datetime] = None
+    role: str = "viewer"
 
 
 @dataclass

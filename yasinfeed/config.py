@@ -15,9 +15,16 @@ DEFAULT_CONFIG = {
     "api": {
         "host": "127.0.0.1",
         "port": 8000,
+        "security": {
+            "enabled": False,
+            "rate_limit_per_minute": 60,
+            "token_expiry_hours": 24,
+            "admin_api_key": None,
+        }
     },
     "fetch": {
         "interval_seconds": 300,
+        "content_merge_strategy": "priority",
     },
     "rewrite": {
         "provider": "dummy",
@@ -176,6 +183,38 @@ class ConfigurationError(ValueError):
     pass
 
 
+def mask_sensitive_data(data):
+    """Recursively mask sensitive values in the configuration."""
+    if isinstance(data, dict):
+        masked = {}
+        for k, v in data.items():
+            lower_key = k.lower()
+            if any(secret_term in lower_key for secret_term in ["key", "secret", "password", "token"]):
+                if isinstance(v, str):
+                    masked[k] = "********"
+                else:
+                    masked[k] = v
+            else:
+                masked[k] = mask_sensitive_data(v)
+        return masked
+    elif isinstance(data, list):
+        return [mask_sensitive_data(item) for item in data]
+    return data
+
+
+def enforce_file_permissions(file_path: str) -> None:
+    """Ensures that the file has secure permissions (not world-readable/writable)."""
+    if not file_path or not os.path.exists(file_path):
+        return
+    try:
+        if hasattr(os, "chmod"):
+            current_mode = os.stat(file_path).st_mode
+            if current_mode & 0o077:
+                os.chmod(file_path, 0o600)
+    except Exception:
+        pass
+
+
 def validate_config(config: dict) -> None:
     """Validate critical configuration choices and constraints."""
     # Validate storage.type
@@ -227,6 +266,8 @@ def load_config(config_path=None) -> dict:
     merged_config = copy.deepcopy(DEFAULT_CONFIG)
 
     if os.path.exists(config_path):
+        # Enforce secure permission checks on config file
+        enforce_file_permissions(config_path)
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 loaded_yaml = yaml.safe_load(f)
@@ -254,11 +295,15 @@ def load_config(config_path=None) -> dict:
         storage_dir = os.path.dirname(storage_path)
         if storage_dir:
             os.makedirs(storage_dir, exist_ok=True)
+        # Enforce secure permissions on database file if it exists
+        enforce_file_permissions(storage_path)
 
     log_file_path = merged_config.get("logging", {}).get("file_path")
     if log_file_path:
         log_dir = os.path.dirname(log_file_path)
         if log_dir:
             os.makedirs(log_dir, exist_ok=True)
+        # Enforce secure permissions on log file if it exists
+        enforce_file_permissions(log_file_path)
 
     return merged_config

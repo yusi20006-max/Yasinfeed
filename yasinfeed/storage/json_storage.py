@@ -74,7 +74,14 @@ class JSONStorage(StorageBackend):
             "url": feed_source.url,
             "name": feed_source.name,
             "enabled": feed_source.enabled,
-            "last_fetched_at": last_fetched_str
+            "last_fetched_at": last_fetched_str,
+            "priority": getattr(feed_source, "priority", 1),
+            "weight": getattr(feed_source, "weight", 1.0),
+            "reliability_score": getattr(feed_source, "reliability_score", 1.0),
+            "fetch_count": getattr(feed_source, "fetch_count", 0),
+            "success_count": getattr(feed_source, "success_count", 0),
+            "failure_count": getattr(feed_source, "failure_count", 0),
+            "last_error": getattr(feed_source, "last_error", None)
         }
         self._save_data()
 
@@ -96,7 +103,14 @@ class JSONStorage(StorageBackend):
             url=raw["url"],
             name=raw["name"],
             enabled=raw.get("enabled", True),
-            last_fetched_at=last_fetched_at
+            last_fetched_at=last_fetched_at,
+            priority=raw.get("priority", 1),
+            weight=raw.get("weight", 1.0),
+            reliability_score=raw.get("reliability_score", 1.0),
+            fetch_count=raw.get("fetch_count", 0),
+            success_count=raw.get("success_count", 0),
+            failure_count=raw.get("failure_count", 0),
+            last_error=raw.get("last_error", None)
         )
 
     def list_feed_sources(self) -> List[FeedSource]:
@@ -164,7 +178,8 @@ class JSONStorage(StorageBackend):
             "username": user.username,
             "password_hash": user.password_hash,
             "salt": user.salt,
-            "created_at": created_str
+            "created_at": created_str,
+            "role": getattr(user, "role", "viewer")
         }
         self._save_data()
 
@@ -184,7 +199,8 @@ class JSONStorage(StorageBackend):
             username=raw["username"],
             password_hash=raw["password_hash"],
             salt=raw["salt"],
-            created_at=created_at
+            created_at=created_at,
+            role=raw.get("role", "viewer")
         )
 
     def get_user_by_username(self, username: str) -> Optional[User]:
@@ -202,7 +218,8 @@ class JSONStorage(StorageBackend):
                     username=raw["username"],
                     password_hash=raw["password_hash"],
                     salt=raw["salt"],
-                    created_at=created_at
+                    created_at=created_at,
+                    role=raw.get("role", "viewer")
                 )
         return None
 
