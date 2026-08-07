@@ -42,29 +42,70 @@ class StorageModule(BaseModule):
         self.logger.info("Storage module stopped. Connection pool released.")
         return True
 
+    def _get_monitoring(self):
+        if hasattr(self, 'engine') and self.engine:
+            return self.engine.modules.get("monitoring")
+        return None
+
     def save_feed_source(self, feed_source: FeedSource) -> None:
         """Saves or updates a FeedSource using the active storage backend."""
-        self.backend.save_feed_source(feed_source)
+        monitoring = self._get_monitoring()
+        if monitoring:
+            monitoring.metrics.inc("db_queries")
+            with monitoring.metrics.timing("db_save_feed_source"):
+                self.backend.save_feed_source(feed_source)
+        else:
+            self.backend.save_feed_source(feed_source)
 
     def get_feed_source(self, feed_source_id: str) -> Optional[FeedSource]:
         """Retrieves a FeedSource by its unique ID."""
-        return self.backend.get_feed_source(feed_source_id)
+        monitoring = self._get_monitoring()
+        if monitoring:
+            monitoring.metrics.inc("db_queries")
+            with monitoring.metrics.timing("db_get_feed_source"):
+                return self.backend.get_feed_source(feed_source_id)
+        else:
+            return self.backend.get_feed_source(feed_source_id)
 
     def list_feed_sources(self) -> List[FeedSource]:
         """Lists all stored FeedSources."""
-        return self.backend.list_feed_sources()
+        monitoring = self._get_monitoring()
+        if monitoring:
+            monitoring.metrics.inc("db_queries")
+            with monitoring.metrics.timing("db_list_feed_sources"):
+                return self.backend.list_feed_sources()
+        else:
+            return self.backend.list_feed_sources()
 
     def save_article(self, article: Article) -> None:
         """Saves or updates an Article using the active storage backend."""
-        self.backend.save_article(article)
+        monitoring = self._get_monitoring()
+        if monitoring:
+            monitoring.metrics.inc("db_queries")
+            with monitoring.metrics.timing("db_save_article"):
+                self.backend.save_article(article)
+        else:
+            self.backend.save_article(article)
 
     def get_article(self, article_id: str) -> Optional[Article]:
         """Retrieves an Article by its unique ID."""
-        return self.backend.get_article(article_id)
+        monitoring = self._get_monitoring()
+        if monitoring:
+            monitoring.metrics.inc("db_queries")
+            with monitoring.metrics.timing("db_get_article"):
+                return self.backend.get_article(article_id)
+        else:
+            return self.backend.get_article(article_id)
 
     def list_articles(self) -> List[Article]:
         """Lists all stored Articles."""
-        return self.backend.list_articles()
+        monitoring = self._get_monitoring()
+        if monitoring:
+            monitoring.metrics.inc("db_queries")
+            with monitoring.metrics.timing("db_list_articles"):
+                return self.backend.list_articles()
+        else:
+            return self.backend.list_articles()
 
     def save_user(self, user: User) -> None:
         """Saves or updates a User using the active storage backend."""

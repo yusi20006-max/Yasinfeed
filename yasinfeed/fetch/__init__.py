@@ -54,6 +54,9 @@ class FetchModule(BaseModule):
         Fetch all enabled feed sources and convert entries
         into standard pipeline items.
         """
+        monitoring = self.engine.modules.get("monitoring")
+        if monitoring:
+            monitoring.metrics.inc("fetch_cycles")
 
         self.logger.info(
             "Fetching registered feed sources..."
@@ -67,48 +70,49 @@ class FetchModule(BaseModule):
             )
             return []
 
-        sources = storage.list_feed_sources()
-        all_raw_items = []
+        def _do_fetch():
+            sources = storage.list_feed_sources()
+            all_raw_items = []
+            integration = self.engine.modules.get("integration")
 
-        for source in sources:
-            if not source.enabled:
-                continue
+            for source in sources:
+                if not source.enabled:
+                    continue
 
-            # Update fetch count
-            source.fetch_count = getattr(source, "fetch_count", 0) + 1
-            source_success = False
+                # Update fetch count
+                source.fetch_count = getattr(source, "fetch_count", 0) + 1
+                source_success = False
 
-            try:
-                self.logger.info(
-                    "Fetching source: %s",
-                    source.url
-                )
+                try:
+                    self.logger.info(
+                        "Fetching source: %s",
+                        source.url
+                    )
 
-                # Fetch with retry (exponential backoff)
-                feed = retry(
-                    lambda: self.fetcher.fetch(source.url),
-                    retries=3,
-                    delay=1,
-                    backoff=2
-                )
+                    # Fetch with retry (exponential backoff)
+                    feed = retry(
+                        lambda: self.fetcher.fetch(source.url),
+                        retries=3,
+                        delay=1,
+                        backoff=2
+                    )
 
-                source_success = True
-                source.success_count = getattr(source, "success_count", 0) + 1
-                source.last_fetched_at = datetime.now(timezone.utc)
-                source.last_error = None
+                    source_success = True
+                    source.success_count = getattr(source, "success_count", 0) + 1
+                    source.last_fetched_at = datetime.now(timezone.utc)
+                    source.last_error = None
 
-                # Gather items from this source
-                for entry in feed.entries:
-                    title = getattr(entry, "title", "")
-                    content = getattr(entry, "description", "") or getattr(entry, "summary", "") or ""
-                    url = getattr(entry, "link", "")
+                    # Gather items from this source
+                    for entry in feed.entries:
+                        title = getattr(entry, "title", "")
+                        content = getattr(entry, "description", "") or getattr(entry, "summary", "") or ""
+                        url = getattr(entry, "link", "")
 
-                    article_id = hashlib.sha256(
-                        url.encode("utf-8")
-                    ).hexdigest()[:16]
+                        article_id = hashlib.sha256(
+                            url.encode("utf-8")
+                        ).hexdigest()[:16]
 
-                    all_raw_items.append(
-                        {
+                        item_dict = {
                             "id": article_id,
                             "source_id": source.id,
                             "source_name": source.name,
@@ -120,42 +124,58 @@ class FetchModule(BaseModule):
                             "url": url,
                             "published_at": datetime.now(timezone.utc)
                         }
+                        all_raw_items.append(item_dict)
+                        if integration:
+                            integration.trigger_event("on_article_fetched", item_dict)
+
+                    if monitoring:
+                        monitoring.metrics.inc("articles_fetched", len(feed.entries))
+
+                    self.logger.info(
+                        "Fetched %d items from %s",
+                        len(feed.entries),
+                        source.name
                     )
 
-                monitoring = self.engine.modules.get("monitoring")
-                if monitoring:
-                    monitoring.metrics.inc("articles_fetched", len(feed.entries))
+                except Exception as e:
+                    self.logger.error(
+                        "Failed fetching %s: %s",
+                        source.url,
+                        e,
+                        exc_info=True
+                    )
+                    source.failure_count = getattr(source, "failure_count", 0) + 1
+                    source.last_error = str(e)
+                    if monitoring:
+                        monitoring.metrics.record_error("fetch", "SourceFetchError", f"{source.name}: {str(e)}")
+                        monitoring.log_event(
+                            event_type="source_fetch_failure",
+                            severity="warning",
+                            module="fetch",
+                            message=f"Failed to fetch from {source.name}",
+                            details={"url": source.url, "error": str(e)}
+                        )
 
-                self.logger.info(
-                    "Fetched %d items from %s",
-                    len(feed.entries),
-                    source.name
-                )
+                # Update reliability score
+                total_fetches = getattr(source, "fetch_count", 1)
+                successes = getattr(source, "success_count", 0)
+                source.reliability_score = successes / total_fetches if total_fetches > 0 else 0.0
 
-            except Exception as e:
-                self.logger.error(
-                    "Failed fetching %s: %s",
-                    source.url,
-                    e,
-                    exc_info=True
-                )
-                source.failure_count = getattr(source, "failure_count", 0) + 1
-                source.last_error = str(e)
+                # Save updated source back to storage
+                try:
+                    storage.save_feed_source(source)
+                except Exception as se:
+                    self.logger.error("Failed to save updated source statistics: %s", se)
 
-            # Update reliability score
-            total_fetches = getattr(source, "fetch_count", 1)
-            successes = getattr(source, "success_count", 0)
-            source.reliability_score = successes / total_fetches if total_fetches > 0 else 0.0
+            # Perform cross-source duplicate detection & content merging
+            merged_items = self._aggregate_and_merge_items(all_raw_items)
+            return merged_items
 
-            # Save updated source back to storage
-            try:
-                storage.save_feed_source(source)
-            except Exception as se:
-                self.logger.error("Failed to save updated source statistics: %s", se)
-
-        # Perform cross-source duplicate detection & content merging
-        merged_items = self._aggregate_and_merge_items(all_raw_items)
-        return merged_items
+        if monitoring:
+            with monitoring.metrics.timing("fetch_sources"):
+                return _do_fetch()
+        else:
+            return _do_fetch()
 
 
     def _aggregate_and_merge_items(self, items: List[Dict]) -> List[Dict]:

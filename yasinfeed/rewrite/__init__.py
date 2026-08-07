@@ -61,7 +61,7 @@ class RewriteModule(BaseModule):
             TranslationStage(target_lang="en"),
             ContentAnalysisStage(enabled=intelligence_enabled),
             MetadataTaggingStage()
-        ])
+        ], engine=self.engine)
 
         return True
 

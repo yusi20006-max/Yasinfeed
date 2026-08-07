@@ -93,3 +93,46 @@ Component checks are categorized into three operational states:
 1. **`healthy`**: The component is fully functional and ready for work (e.g., SQLite connection is valid, disk write tests succeed).
 2. **`degraded`**: The component is loaded but running in an inactive or limited state (e.g., scheduler is disabled in config).
 3. **`unhealthy`**: The component has failed or is inaccessible (e.g., database connection error, missing read/write permission).
+
+---
+
+## Detailed Telemetry & Performance Tracking
+
+With the advanced Observability Layer (Issue #44) activated, the `/health` payload is dynamically populated with real-time performance timers and errors snapshots.
+
+### 1. Performance Statistics
+Performance tracking captures last duration, peak runtimes, execution counts, and running averages under the `metrics` section:
+- `<operation>_last_duration_seconds`: Precision timing of the last block execution.
+- `<operation>_executions_total`: Sum total of successful block operations.
+- `<operation>_duration_seconds_total`: Cumulative duration sum.
+- `<operation>_average_duration_seconds`: Running mean latency.
+
+Supported operation blocks include:
+- `fetch_sources`
+- `fetch_and_process_pipeline`
+- `db_save_article`, `db_get_article`, `db_list_articles`
+- `db_save_feed_source`, `db_get_feed_source`, `db_list_feed_sources`
+- `pipeline_stage_SanitizationStage`, `pipeline_stage_RewriteStage`, `pipeline_stage_TranslationStage`, `pipeline_stage_ContentAnalysisStage`, `pipeline_stage_MetadataTaggingStage`
+
+### 2. Error Metrics
+Detailed errors mapping records occurrences, type, description, and timestamp of the last recorded error per subsystem under the `errors` section:
+```json
+{
+  "errors": {
+    "total_errors": 1,
+    "last_errors": {
+      "fetch": {
+        "type": "SourceFetchError",
+        "message": "Source Name: Connection timeout",
+        "timestamp": "2026-08-07T12:05:00Z"
+      }
+    }
+  }
+}
+```
+
+### 3. Structured Event Log (JSON Lines)
+High-integrity events are written to `config/events.json` with standard structures:
+```json
+{"timestamp": "2026-08-07T12:00:00Z", "event_type": "article_processed", "severity": "INFO", "module": "rewrite", "message": "Article art-1 processed successfully through pipeline", "details": {"title": "Sample Title", "duration": 0.089}}
+```
