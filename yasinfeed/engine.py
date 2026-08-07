@@ -77,6 +77,7 @@ class YasinFeedEngine:
 
             # 3. Import and load all modules in designated order
             # To avoid circular imports, we can import them dynamically inside initialize
+            from yasinfeed.monitoring import MonitoringModule
             from yasinfeed.storage import StorageModule
             from yasinfeed.models import ModelsModule
             from yasinfeed.auth import AuthModule
@@ -87,6 +88,7 @@ class YasinFeedEngine:
             from yasinfeed.api import ApiModule
 
             # Register them in the correct dependency order
+            self.register_module(MonitoringModule)
             self.register_module(StorageModule)
             self.register_module(ModelsModule)
             self.register_module(AuthModule)

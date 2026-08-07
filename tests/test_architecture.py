@@ -9,8 +9,8 @@ class TestArchitecture(unittest.TestCase):
     """
     def test_required_modules_exist(self):
         # We need to verify the existence of expected core modules:
-        # api, fetch, rewrite, storage, scheduler, publisher, models, auth.
-        expected_modules = ["api", "fetch", "rewrite", "storage", "scheduler", "publisher", "models", "auth"]
+        # api, fetch, rewrite, storage, scheduler, publisher, models, auth, monitoring.
+        expected_modules = ["api", "fetch", "rewrite", "storage", "scheduler", "publisher", "models", "auth", "monitoring"]
 
         for module_name in expected_modules:
             try:
@@ -25,7 +25,7 @@ class TestArchitecture(unittest.TestCase):
         success = engine.initialize()
         self.assertTrue(success)
 
-        expected_modules = ["storage", "models", "auth", "rewrite", "fetch", "publisher", "scheduler", "api"]
+        expected_modules = ["storage", "models", "auth", "rewrite", "fetch", "publisher", "scheduler", "api", "monitoring"]
         for m_name in expected_modules:
             self.assertIn(m_name, engine.modules, f"Module '{m_name}' not loaded in engine")
             module_inst = engine.modules[m_name]

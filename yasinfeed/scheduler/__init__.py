@@ -42,6 +42,10 @@ class SchedulerModule(BaseModule):
         """
         self.logger.info("Executing automated fetch_and_process pipeline...")
 
+        monitoring = self.engine.modules.get("monitoring")
+        if monitoring:
+            monitoring.metrics.inc("fetch_cycles")
+
         # Access sibling modules via engine
         storage = self.engine.modules.get("storage")
         fetch = self.engine.modules.get("fetch")
@@ -147,6 +151,8 @@ class SchedulerModule(BaseModule):
                 if storage:
                     try:
                         storage.save_article(article)
+                        if monitoring:
+                            monitoring.metrics.inc("articles_processed")
                     except Exception as ex:
                         self.logger.error("Failed to save processed article %s to storage: %s", article_id, ex)
 

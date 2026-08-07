@@ -15,7 +15,7 @@ class TestFetcher(unittest.TestCase):
         f=FeedFetcher()
         data=f.fetch("http://test")
 
-        self.assertIn("<rss>",data)
+        self.assertEqual(data.version, "rss")
 
 if __name__=="__main__":
     unittest.main()
