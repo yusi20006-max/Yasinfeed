@@ -43,8 +43,14 @@ publisher:
     enabled: false
   pwa:
     enabled: false
+    output_path: "data/pwa/feed.json"
+    base_url: ""
   rss:
     enabled: false
+    output_path: "data/rss/feed.xml"
+    title: "YasinFeed"
+    link: "http://127.0.0.1:8000/api/feed"
+    description: "YasinFeed published news"
 
 models:
   provider: "dummy"
