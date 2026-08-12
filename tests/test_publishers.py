@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
 import json
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 from yasinfeed.models.article import Article
 from yasinfeed.publisher.pwa import PWAPublisher
@@ -20,6 +20,17 @@ def article() -> Article:
         published_outputs=["eitaa"],
         pipeline_metadata={"category": "technology"},
     )
+
+
+def pipeline_item() -> dict:
+    return {
+        "id": "dict-1",
+        "source_id": "bbc",
+        "title": "خبر از مسیر pipeline",
+        "content": "متن اصلی",
+        "url": "https://example.com/news/dict-1",
+        "published_at": datetime(2026, 8, 12, 10, 0, tzinfo=timezone.utc),
+    }
 
 
 def test_pwa_publishes_json(tmp_path):
@@ -61,6 +72,24 @@ def test_rss_publishes_rss2(tmp_path):
     assert item.findtext("description") == "متن بازنویسی‌شده"
     assert item.findtext("link") == "https://example.com/news/a1"
     assert item.find("guid") is not None
+
+
+def test_publishers_accept_pipeline_dictionaries(tmp_path):
+    pwa_path = tmp_path / "pwa.json"
+    rss_path = tmp_path / "feed.xml"
+
+    PWAPublisher(str(pwa_path)).publish([pipeline_item()])
+    RSSPublisher(str(rss_path)).publish([pipeline_item()])
+
+    pwa = json.loads(pwa_path.read_text(encoding="utf-8"))
+    rss = ET.fromstring(rss_path.read_bytes())
+    rss_item = rss.find("channel/item")
+
+    assert pwa["items"][0]["title"] == "خبر از مسیر pipeline"
+    assert pwa["items"][0]["url"] == "https://example.com/news/dict-1"
+    assert rss_item is not None
+    assert rss_item.findtext("title") == "خبر از مسیر pipeline"
+    assert rss_item.findtext("link") == "https://example.com/news/dict-1"
 
 
 def test_publishers_write_empty_valid_feeds(tmp_path):
