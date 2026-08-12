@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 import xml.etree.ElementTree as ET
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
@@ -26,6 +27,12 @@ class RSSPublisher:
         self.title = title
         self.link = link
         self.description = description
+
+    @staticmethod
+    def _value(article: Any, key: str, default: Any = None) -> Any:
+        if isinstance(article, Mapping):
+            return article.get(key, default)
+        return getattr(article, key, default)
 
     @staticmethod
     def _published(value: Any) -> str:
@@ -52,17 +59,18 @@ class RSSPublisher:
 
         for article in articles:
             item = ET.SubElement(channel, "item")
-            title = getattr(article, "title", "") or ""
-            url = getattr(article, "original_url", "") or ""
-            content = getattr(article, "rewritten_content", None) or getattr(article, "content", "") or ""
-            article_id = getattr(article, "id", "") or url
+            title = self._value(article, "title", "") or ""
+            url = self._value(article, "original_url", None) or self._value(article, "url", "") or ""
+            rewritten = self._value(article, "rewritten_content", None)
+            content = rewritten if rewritten is not None else self._value(article, "content", "") or ""
+            article_id = self._value(article, "id", "") or url
 
             ET.SubElement(item, "title").text = title
             ET.SubElement(item, "link").text = url
             ET.SubElement(item, "guid", {"isPermaLink": "false"}).text = str(article_id)
             ET.SubElement(item, "description").text = content
             ET.SubElement(item, "pubDate").text = self._published(
-                getattr(article, "published_at", None)
+                self._value(article, "published_at")
             )
 
         return ET.tostring(rss, encoding="utf-8", xml_declaration=True)
