@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -18,6 +19,12 @@ class PWAPublisher:
         self.base_url = base_url.rstrip("/")
 
     @staticmethod
+    def _value(article: Any, key: str, default: Any = None) -> Any:
+        if isinstance(article, Mapping):
+            return article.get(key, default)
+        return getattr(article, key, default)
+
+    @staticmethod
     def _iso(value: Any) -> str | None:
         if value is None:
             return None
@@ -26,18 +33,20 @@ class PWAPublisher:
         return str(value)
 
     def _article(self, article: Any) -> dict[str, Any]:
-        url = getattr(article, "original_url", "") or ""
+        url = self._value(article, "original_url", None) or self._value(article, "url", "") or ""
+        rewritten = self._value(article, "rewritten_content", None)
+        content = rewritten if rewritten is not None else self._value(article, "content", "") or ""
         return {
-            "id": getattr(article, "id", ""),
-            "source_id": getattr(article, "source_id", ""),
-            "title": getattr(article, "title", ""),
-            "content": getattr(article, "rewritten_content", None) or getattr(article, "content", ""),
+            "id": self._value(article, "id", ""),
+            "source_id": self._value(article, "source_id", ""),
+            "title": self._value(article, "title", ""),
+            "content": content,
             "original_url": url,
             "url": url,
-            "published_at": self._iso(getattr(article, "published_at", None)),
-            "rewrite_status": getattr(article, "rewrite_status", "pending"),
-            "published_outputs": list(getattr(article, "published_outputs", []) or []),
-            "pipeline_metadata": dict(getattr(article, "pipeline_metadata", {}) or {}),
+            "published_at": self._iso(self._value(article, "published_at")),
+            "rewrite_status": self._value(article, "rewrite_status", "pending"),
+            "published_outputs": list(self._value(article, "published_outputs", []) or []),
+            "pipeline_metadata": dict(self._value(article, "pipeline_metadata", {}) or {}),
         }
 
     def render(self, articles: Iterable[Any]) -> dict[str, Any]:
