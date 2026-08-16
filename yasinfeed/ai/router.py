@@ -24,7 +24,6 @@ class AIRouter:
         for p in self.providers:
             try:
                 if hasattr(p, "rewrite") and callable(getattr(p, "rewrite")):
-                    # Support both rewrite(text) and rewrite(title, content)
                     try:
                         return p.rewrite(text)
                     except TypeError:
@@ -32,7 +31,7 @@ class AIRouter:
                 if hasattr(p, "generate") and callable(getattr(p, "generate")):
                     return p.generate(text)
             except Exception as exc:
-                logger.warning("AIRouter provider failed, trying next: %s", exp if False else exc)
+                logger.warning("AIRouter provider failed, trying next: %s", exc)
                 continue
         return text
 
@@ -44,7 +43,6 @@ class AIRouter:
         cfg = rewrite_config or {}
         name = (cfg.get("provider") or "dummy").strip().lower()
         provider_cfg = cfg.get(name, {}) if isinstance(cfg.get(name), dict) else {}
-        # allow yasinai alias block under "yasinai" even if name is "yasin-ai"
         if name in ("yasin-ai",) and not provider_cfg:
             provider_cfg = cfg.get("yasinai", {}) or {}
 
@@ -55,7 +53,6 @@ class AIRouter:
         except Exception as exc:
             logger.error("Failed to create primary AI provider '%s': %s", name, exc)
 
-        # Optional ordered failover list
         for extra in cfg.get("failover", []) or []:
             if not isinstance(extra, dict):
                 continue

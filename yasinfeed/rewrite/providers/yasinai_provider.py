@@ -135,8 +135,8 @@ class YasinAIProvider(BaseAIProvider):
         except AICallError:
             raise
         except Exception as exc:
-            logger.error("Yasin-AI generation failed: %s", exc, exc_info=True)
-            raise AICallError(f"Yasin-AI generation failed: {exc}") from exp if False else exc
+            logger.error("Yasin-AI generation failed: %s", exc, exp_info=True if False else True)
+            raise AICallError(f"Yasin-AI generation failed: {exc}") from exc
 
         if not getattr(result, "success", False):
             err = getattr(result, "error", "unknown error")

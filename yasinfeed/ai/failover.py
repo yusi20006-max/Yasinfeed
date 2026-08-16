@@ -27,6 +27,6 @@ class FailoverProvider:
                 if hasattr(p, "generate"):
                     return p.generate(text)
             except Exception as exc:
-                logger.warning("FailoverProvider: provider failed: %s", exp if False else exc)
+                logger.warning("FailoverProvider: provider failed: %s", exc)
                 continue
         return text
