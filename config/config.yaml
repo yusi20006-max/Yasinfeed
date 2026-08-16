@@ -17,7 +17,17 @@ fetch:
   interval_seconds: 300
 
 rewrite:
+  # Prefer canonical Yasin-AI public contracts when the package is installed:
+  #   provider: "yasinai"
+  # Default remains "dummy" for offline/CI without yasinai.
   provider: "dummy"
+  yasinai:
+    api_key: ""
+    model: "gpt-4o-mini"
+    temperature: 0.7
+    max_tokens: 2048
+    # optional: pin Yasin-AI provider name (openai, local, anthropic)
+    provider: null
   openai:
     api_key: ""
     base_url: "https://api.openai.com/v1"
@@ -30,6 +40,10 @@ rewrite:
     api_url: null
     temperature: null
     max_new_tokens: null
+  # Optional ordered failover after primary:
+  # failover:
+  #   - provider: dummy
+  #     config: {}
 
 storage:
   type: "sqlite"

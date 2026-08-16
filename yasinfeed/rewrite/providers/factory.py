@@ -4,6 +4,7 @@ from yasinfeed.rewrite.providers.dummy import DummyProvider
 from yasinfeed.rewrite.providers.openai import OpenAIProvider
 from yasinfeed.rewrite.providers.huggingface import HuggingFaceProvider
 from yasinfeed.rewrite.pipeline_providers import MockAIProvider
+from yasinfeed.rewrite.providers.yasinai_provider import YasinAIProvider
 
 # Mapping of provider identifiers to their concrete class implementations.
 PROVIDERS: Dict[str, Type[BaseAIProvider]] = {
@@ -11,6 +12,8 @@ PROVIDERS: Dict[str, Type[BaseAIProvider]] = {
     "openai": OpenAIProvider,
     "huggingface": HuggingFaceProvider,
     "mock_ai": MockAIProvider,
+    "yasinai": YasinAIProvider,
+    "yasin-ai": YasinAIProvider,
 }
 
 
