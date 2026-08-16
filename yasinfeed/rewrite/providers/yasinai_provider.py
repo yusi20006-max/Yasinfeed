@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import os
 from types import SimpleNamespace
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from yasinfeed.rewrite.providers.base import (
     AICallError,
@@ -95,8 +95,8 @@ class YasinAIProvider(BaseAIProvider):
         max_tokens = self.config.get("max_tokens")
         self.max_tokens = int(max_tokens) if max_tokens is not None else 2048
         self.system_prompt = self.config.get("system_prompt") or DEFAULT_SYSTEM_PROMPT
-        self.preferred_provider = self.config.get("provider")  # optional pin (openai/local/...)
-        self._generation_service = self.config.get("_generation_service")  # test injection
+        self.preferred_provider = self.config.get("provider")
+        self._generation_service = self.config.get("_generation_service")
 
         _ensure_openai_env(self.api_key)
 
@@ -135,8 +135,8 @@ class YasinAIProvider(BaseAIProvider):
         except AICallError:
             raise
         except Exception as exc:
-            logger.error("Yasin-AI generation failed: %s", exc, exp_info=True if False else True)
-            raise AICallError(f"Yasin-AI generation failed: {exc}") from exc
+            logger.error("Yasin-AI generation failed: %s", exc, exc_info=True)
+            raise AICallError(f"Yasin-AI generation failed: {exc}") from exp if False else exc
 
         if not getattr(result, "success", False):
             err = getattr(result, "error", "unknown error")
