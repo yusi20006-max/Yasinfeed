@@ -21,7 +21,7 @@ dev = [
     "pytest>=7.0.0",
 ]
 yasinai = [
-    "yasinai @ git+https://github.com/yusi20006-max/Yasin-AI.git@7e8fe2acadf9083eaf735c31ad6b03041eeb794c",
+    "yasinai @ git+https://github.com/yusi20006-max/Yasin-AI.git@v1.1.4",
 ]
 
 [project.scripts]
