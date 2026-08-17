@@ -21,6 +21,8 @@ dev = [
     "pytest>=7.0.0",
 ]
 yasinai = [
+    # Unreleased integration pin per docs/RELEASE_DEPENDENCY_POLICY.md (Yasin-AI) section 2.
+    # This is NOT the released v1.1.4 tag; move to a release tag once promoted per section 4.
     "yasinai @ git+https://github.com/yusi20006-max/Yasin-AI.git@f778338be03e8085e8cc7f82e54e4bfdd39b68dd",
 ]
 
