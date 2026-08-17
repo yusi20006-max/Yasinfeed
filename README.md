@@ -112,6 +112,18 @@ YasinFeed supports multi-tiered configuration loading.
 pip install -r requirements.txt
 ```
 
+### Optional: Yasin-AI provider
+The `yasinai` rewrite provider (`AI_PROVIDER=yasinai`) is optional and not
+installed by default — YasinFeed runs fully without it (falls back to the
+`dummy`/other configured provider). To enable it:
+
+```bash
+pip install -e ".[yasinai]"
+```
+
+If `yasinai` is not installed, selecting this provider raises a documented
+`AIConfigurationError` rather than failing silently.
+
 ### Run YasinFeed
 ```bash
 python -m yasinfeed.main
