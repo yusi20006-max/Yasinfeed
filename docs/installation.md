@@ -8,7 +8,7 @@ YasinFeed is designed to be lightweight, pure-Python, and zero-dependency at its
 
 Before starting, ensure your system meets the minimum requirements:
 
-- **Python Version:** `>= 3.8` (Python 3.11+ is recommended)
+- **Python Version:** `>= 3.8` (Python 3.11+ is recommended; Python 3.14 fully supported)
 - **Permissions:**
   - Standard user permissions for installing dependencies and running the service.
   - Root/sudo access is **not** required, making it highly secure and easy to deploy in sandbox environments or restricted mobile terminals (Termux).

@@ -1,12 +1,12 @@
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 
 class FeedItem:
     def __init__(self,title="",link="",content="",published_at=None):
         self.title=title
         self.link=link
         self.content=content
-        self.published_at=published_at or datetime.utcnow()
+        self.published_at=published_at or datetime.now(timezone.utc)
 
 class RSSParser:
 
