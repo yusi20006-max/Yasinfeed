@@ -44,7 +44,7 @@ cd Yasinfeed
 sh scripts/setup.sh
 ```
 
-- **Compatibility:** Python `>= 3.8` (Tested on 3.8, 3.9, 3.10, 3.11, 3.12). Supported on Ubuntu, Debian, CentOS, and Termux on Android.
+- **Compatibility:** Python `>= 3.8` (Tested on 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14). Standardized support on Ubuntu, Debian, CentOS, and Termux on Android 11 ARM64 API 30+.
 
 ## 8. Known Limitations
 - **No Hub / Agent Workflow Execution:** Orchestration, service coordination (YasinHub), and workflow agents (Yasin-Agent) must be implemented in their respective companion services, adhering to the strict boundaries of YasinFeed's ecosystem design.

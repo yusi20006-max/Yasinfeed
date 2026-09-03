@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from yasinfeed.models import Article
 from yasinfeed.rewrite.pipeline_providers import DummyProvider, MockAIProvider
 from yasinfeed.rewrite.stages import SanitizationStage, RewriteStage, TranslationStage, MetadataTaggingStage
@@ -16,7 +16,7 @@ class TestContentPipeline(unittest.TestCase):
             title="<p>Breaking News:  Artificial Intelligence and Python  </p>",
             content="<div>An exciting AI LLM release was announced today.\n\n It's software built with python!</div>",
             original_url="https://example.com/test",
-            published_at=datetime.utcnow(),
+            published_at=datetime.now(timezone.utc),
             rewrite_status="pending"
         )
 

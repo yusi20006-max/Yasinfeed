@@ -1,1 +1,1 @@
-from .main import main
+# CLI package initialization
