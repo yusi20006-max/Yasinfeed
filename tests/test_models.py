@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 from yasinfeed.models.article import Article
 from yasinfeed.models.feed_source import FeedSource
@@ -13,7 +13,7 @@ class TestModels(unittest.TestCase):
             title="title",
             content="body",
             original_url="https://example.com",
-            published_at=datetime.now(UTC),
+            published_at=datetime.now(timezone.utc),
         )
         self.assertEqual(a.rewrite_status, "pending")
 
